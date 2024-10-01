@@ -4,17 +4,17 @@ import kotlinx.io.IOException
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-inline fun Zip.forEachEntryIndexed(crossinline block: (ULong, Zip.Entry) -> Unit) {
+public inline fun Zip.forEachEntryIndexed(crossinline block: (ULong, Zip.Entry) -> Unit) {
     for (i in 0uL until numberOfEntries) {
         entry(i) { block(i, this) }
     }
 }
 
-inline fun Zip.forEachEntry(crossinline block: (Zip.Entry) -> Unit) = forEachEntryIndexed { _, entry ->
+public inline fun Zip.forEachEntry(crossinline block: (Zip.Entry) -> Unit): Unit = forEachEntryIndexed { _, entry ->
     block(entry)
 }
 
-fun Zip.extractTo(directory: Path) {
+public fun Zip.extractTo(directory: Path) {
     forEachEntry { entry ->
         val target = Path(directory, entry.path.toString())
         if (entry.isDirectory) {
@@ -26,7 +26,7 @@ fun Zip.extractTo(directory: Path) {
     }
 }
 
-fun Zip.compressFrom(path: Path, pathInZip: Path? = null) {
+public fun Zip.compressFrom(path: Path, pathInZip: Path? = null) {
     val metadata = SystemFileSystem.metadataOrNull(path) ?: throw IOException("Cannot read metadata of $path")
     if (metadata.isDirectory) {
         println("Compressing directory $pathInZip")

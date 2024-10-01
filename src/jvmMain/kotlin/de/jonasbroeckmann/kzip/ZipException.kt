@@ -2,4 +2,4 @@ package de.jonasbroeckmann.kzip
 
 import java.util.zip.ZipException
 
-actual typealias ZipException = ZipException
+public actual typealias ZipException = ZipException

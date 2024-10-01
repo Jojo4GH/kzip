@@ -38,6 +38,7 @@ private class KubaZip(
             zip_entry_close(handle).zeroOrZipError()
         }
     }
+
 //    override fun deleteEntries(paths: List<Path>) = memScoped {
 //        requireWritable()
 //        val names = paths.map { Zip.pathToEntryName(it) }
@@ -75,8 +76,7 @@ private class KubaZip(
         zip_close(handle)
     }
 
-    @OptIn(ExperimentalForeignApi::class)
-    private inner class Entry() : Zip.Entry {
+    private inner class Entry : Zip.Entry {
         override val path: Path by lazy {
             Zip.entryNameToPath(zip_entry_name(handle)!!.toKString())
         }
@@ -102,7 +102,7 @@ private class KubaZip(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun Zip.Companion.open(
+public actual fun Zip.Companion.open(
     path: Path,
     mode: Zip.Mode,
     level: Zip.CompressionLevel

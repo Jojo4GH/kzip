@@ -87,7 +87,7 @@ private class JavaZip(
     }
 }
 
-actual fun Zip.Companion.open(
+public actual fun Zip.Companion.open(
     path: Path,
     mode: Zip.Mode,
     level: Zip.CompressionLevel

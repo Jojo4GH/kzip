@@ -1,7 +1,6 @@
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-
 plugins {
     kotlin("multiplatform") version "2.0.0"
+    `maven-publish`
 }
 
 group = "de.jonasbroeckmann.kzip"
@@ -12,25 +11,26 @@ repositories {
 }
 
 kotlin {
+    explicitApi()
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
     jvm()
+
     mingwX64()
     linuxX64()
-    targets.withType<KotlinNativeTarget> {
-//        compilerOptions.freeCompilerArgs.add("-OptIn=kotlinx.cinterop.ExperimentalForeignApi")
+
+    // Configure cinterop for kuba zip library
+    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
+        val targetName = targetName
         compilations.getByName("main") {
             cinterops {
-                val zip by creating {
+                create("zip${targetName.replaceFirstChar { it.titlecase() }}") {
                     includeDirs.allHeaders(files("src/nativeInterop/cinterop"))
                     packageName("kuba.zip")
                 }
             }
-        }
-        binaries.executable {
-            entryPoint = "de.jonasbroeckmann.kzip.main"
         }
     }
 

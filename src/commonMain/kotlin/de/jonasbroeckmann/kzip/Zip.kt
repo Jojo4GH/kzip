@@ -4,37 +4,37 @@ import kotlinx.io.*
 import kotlinx.io.files.Path
 
 
-interface Zip : AutoCloseable {
-    val mode: Mode
-    val numberOfEntries: ULong
+public interface Zip : AutoCloseable {
+    public val mode: Mode
+    public val numberOfEntries: ULong
 
-    fun entry(entry: Path, block: Entry.() -> Unit)
-    fun entry(index: ULong, block: Entry.() -> Unit)
+    public fun entry(entry: Path, block: Entry.() -> Unit)
+    public fun entry(index: ULong, block: Entry.() -> Unit)
 
-//    fun deleteEntries(paths: List<Path>)
-//    fun deleteEntries(indices: List<ULong>)
+//    public fun deleteEntries(paths: List<Path>)
+//    public fun deleteEntries(indices: List<ULong>)
 
-    fun entryFromSource(entry: Path, data: Source)
-    fun entryFromPath(entry: Path, file: Path)
-    fun folderEntry(entry: Path)
+    public fun entryFromSource(entry: Path, data: Source)
+    public fun entryFromPath(entry: Path, file: Path)
+    public fun folderEntry(entry: Path)
 
-    interface Entry {
-        val path: Path
-        val isDirectory: Boolean
-        val uncompressedSize: ULong
-        val compressedSize: ULong
-        val crc32: Long
+    public interface Entry {
+        public val path: Path
+        public val isDirectory: Boolean
+        public val uncompressedSize: ULong
+        public val compressedSize: ULong
+        public val crc32: Long
 
-        fun readToSource(): Source
-        fun readToBytes(): ByteArray
-        fun readToPath(path: Path)
+        public fun readToSource(): Source
+        public fun readToBytes(): ByteArray
+        public fun readToPath(path: Path)
     }
 
-    enum class Mode {
+    public enum class Mode {
         Read, Write, Append
     }
 
-    enum class CompressionLevel(val zlibLevel: Int) {
+    public enum class CompressionLevel(public val zlibLevel: Int) {
         NoCompression(0),
         BestSpeed(1),
         BetterSpeed(2),
@@ -45,15 +45,15 @@ interface Zip : AutoCloseable {
         GoodCompression(7),
         BetterCompression(8),
         BestCompression(9);
-        companion object {
-            val Default = MediumBetterCompression
+        public companion object {
+            public val Default: CompressionLevel = MediumBetterCompression
         }
     }
 
-    companion object
+    public companion object
 }
 
-expect fun Zip.Companion.open(
+public expect fun Zip.Companion.open(
     path: Path,
     mode: Zip.Mode = Zip.Mode.Read,
     level: Zip.CompressionLevel = Zip.CompressionLevel.Default
