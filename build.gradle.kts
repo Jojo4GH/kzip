@@ -1,10 +1,10 @@
 plugins {
     kotlin("multiplatform") version "2.0.0"
-    `maven-publish`
+    id("com.vanniktech.maven.publish.base") version "0.29.0"
 }
 
-group = "de.jonasbroeckmann.kzip"
-version = "1.0.0"
+group = property("GROUP")!!
+version = property("VERSION_NAME")!!
 
 repositories {
     mavenCentral()
@@ -42,4 +42,11 @@ kotlin {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
         }
     }
+}
+
+mavenPublishing {
+    pomFromGradleProperties()
+    configure(com.vanniktech.maven.publish.KotlinMultiplatform())
+    publishToMavenCentral()
+    signAllPublications()
 }
