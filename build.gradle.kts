@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform") version "2.1.20"
+    id("org.jetbrains.dokka") version "2.0.0"
     id("com.vanniktech.maven.publish.base") version "0.31.0"
 }
 
@@ -39,6 +40,15 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
+        }
+    }
+}
+
+dokka {
+    dokkaSourceSets.configureEach {
+        sourceLink {
+            localDirectory.set(rootDir)
+            remoteUrl("https://github.com/Jojo4GH/kzip/tree/master")
         }
     }
 }
