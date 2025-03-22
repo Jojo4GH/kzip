@@ -1,6 +1,4 @@
-<div align="center">
-
-# 📂 kzip 📂
+# Kzip
 
 [![Maven Central][kzip-maven-badge]][kzip-maven]
 [![GitHub][kzip-license-badge]](LICENSE)
@@ -8,16 +6,16 @@
 [![Kotlin Multiplatform][kotlin-multiplatform-badge]][kotlin-multiplatform]
 [![JVM Platform][jvm-platform-badge]][kotlin-jvm]
 [![Linux X64 Platform][linux-x64-platform-badge]][kotlin-native]
-[![Linux ARM64 Platform][linux-x64-platform-badge]][kotlin-native]
+[![Linux ARM64 Platform][linux-arm64-platform-badge]][kotlin-native]
 [![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native]
 
 [kzip-maven-badge]: https://img.shields.io/maven-central/v/de.jonasbroeckmann.kzip/kzip?label=Latest
 [kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip
-[kotlin-multiplatform-badge]: https://img.shields.io/badge/Kotlin_Multiplatform-bababb?logo=kotlin
-[jvm-platform-badge]: https://img.shields.io/badge/JVM-4dbb5f
-[linux-x64-platform-badge]: https://img.shields.io/badge/Linux_X64-e082f3
-[linux-arm64-platform-badge]: https://img.shields.io/badge/Linux_ARM64-e082f3
-[mingw-x64-platform-badge]: https://img.shields.io/badge/MinGW_X64-e082f3
+[kotlin-multiplatform-badge]: https://img.shields.io/badge/Kotlin_Multiplatform-grey?logo=kotlin
+[jvm-platform-badge]: https://img.shields.io/badge/Platform-JVM-4dbb5f
+[linux-x64-platform-badge]: https://img.shields.io/badge/Native-Linux_X64-e082f3
+[linux-arm64-platform-badge]: https://img.shields.io/badge/Native-Linux_ARM64-e082f3
+[mingw-x64-platform-badge]: https://img.shields.io/badge/Native-MinGW_X64-e082f3
 
 [kzip-maven]: https://central.sonatype.com/artifact/de.jonasbroeckmann.kzip/kzip
 [kotlin-multiplatform]: https://kotlinlang.org/docs/multiplatform.html
@@ -25,10 +23,6 @@
 [kotlin-jvm]: https://kotlinlang.org/docs/jvm-get-started.html
 
 A lightweight Kotlin Multiplatform library for reading, writing and modifying ZIP files.
-
-</div>
-
----
 
 ## ⭐️ Main Features
 
@@ -42,7 +36,7 @@ Currently, kzip supports the JVM, Linux X64, Linux ARM64 and MinGW X64 targets, 
 ## 🛠️ Installation
 
 The kzip dependency is available on Maven Central and can be added to your common source set.
-Just replace `$kzipVersion` with the [latest version](#-kzip-).
+Just replace `$kzipVersion` with the [latest version](#kzip).
 
 <details open>
 <summary>Gradle - Kotlin DSL</summary>
