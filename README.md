@@ -10,7 +10,7 @@
 [![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native]
 
 [kzip-maven-badge]: https://img.shields.io/maven-central/v/de.jonasbroeckmann.kzip/kzip?label=Latest
-[kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip
+[kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip?cacheSeconds=3600
 [kotlin-multiplatform-badge]: https://img.shields.io/badge/Kotlin_Multiplatform-grey?logo=kotlin
 [jvm-platform-badge]: https://img.shields.io/badge/Platform-JVM-4dbb5f
 [linux-x64-platform-badge]: https://img.shields.io/badge/Native-Linux_X64-e082f3
