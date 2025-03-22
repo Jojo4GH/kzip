@@ -8,7 +8,6 @@ import kotlinx.io.Source
 import kotlinx.io.readByteArray
 import libzip.*
 
-
 @OptIn(ExperimentalForeignApi::class)
 private class KubaZip(
     private val handle: CPointer<zip_t>,
@@ -39,17 +38,17 @@ private class KubaZip(
         }
     }
 
-//    override fun deleteEntries(paths: List<Path>) = memScoped {
-//        requireWritable()
-//        val names = paths.map { Zip.pathToEntryName(it) }
-//        val result = zip_entries_delete(handle, names.toCStringArray(this), names.size.toULong())
-//        if (result <= 0) throwZipError("Failed to delete entries", result)
-//    }
-//    override fun deleteEntries(indices: List<ULong>) = memScoped {
-//        requireWritable()
-//        val result = zip_entries_deletebyindex(handle, indices.toULongArray().toCValues().ptr, indices.size.toULong())
-//        if (result <= 0) throwZipError("Failed to delete entries", result)
-//    }
+    override fun deleteEntries(paths: List<Path>) = memScoped {
+        requireWritable()
+        val names = paths.map { Zip.pathToEntryName(it) }
+        val result = zip_entries_delete(handle, names.toCStringArray(this), names.size.toULong())
+        if (result <= 0) throwZipError("Failed to delete entries", result)
+    }
+    override fun deleteEntries(indices: List<ULong>) = memScoped {
+        requireWritable()
+        val result = zip_entries_deletebyindex(handle, indices.toULongArray().toCValues().ptr, indices.size.toULong())
+        if (result <= 0) throwZipError("Failed to delete entries", result)
+    }
 
     override fun entryFromSource(entry: Path, data: Source) {
         requireWritable()

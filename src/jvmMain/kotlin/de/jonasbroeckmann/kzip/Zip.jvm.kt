@@ -9,7 +9,6 @@ import java.util.zip.ZipEntry as JavaZipEntry
 import java.util.zip.ZipException as JavaZipException
 import java.util.zip.ZipFile as JavaZipFile
 
-
 private class JavaZip(
     private val zipFile: Path,
     override val mode: Zip.Mode,
@@ -41,12 +40,12 @@ private class JavaZip(
         Entry(entries[index.toInt()]).block()
     }
 
-//    override fun deleteEntries(indices: List<ULong>) {
-//        throw UnsupportedOperationException("Deleting entries is not supported on JVM")
-//    }
-//    override fun deleteEntries(paths: List<Path>) {
-//        throw UnsupportedOperationException("Deleting entries is not supported on JVM")
-//    }
+    override fun deleteEntries(indices: List<ULong>) {
+        throw UnsupportedOperationException("Deleting entries is not supported on JVM")
+    }
+    override fun deleteEntries(paths: List<Path>) {
+        throw UnsupportedOperationException("Deleting entries is not supported on JVM")
+    }
 
     override fun entryFromSource(entry: Path, data: Source) {
         zos.putNextEntry(JavaZipEntry(Zip.pathToEntryName(entry)))
