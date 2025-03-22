@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform") version "2.0.0"
-    id("com.vanniktech.maven.publish.base") version "0.29.0"
+    kotlin("multiplatform") version "2.1.20"
+    id("com.vanniktech.maven.publish.base") version "0.31.0"
 }
 
 group = property("GROUP")!!
@@ -11,24 +11,23 @@ repositories {
 }
 
 kotlin {
-    explicitApi()
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
+    explicitApi()
 
     jvm()
 
     mingwX64()
     linuxX64()
+    linuxArm64()
 
     // Configure cinterop for kuba zip library
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
-        val targetName = targetName
         compilations.getByName("main") {
             cinterops {
-                create("zip${targetName.replaceFirstChar { it.titlecase() }}") {
-                    includeDirs.allHeaders(files("src/nativeInterop/cinterop"))
-                    packageName("kuba.zip")
+                cinterops.create("zip") {
+                    includeDirs("src/nativeInterop/cinterop")
                 }
             }
         }
@@ -47,6 +46,6 @@ kotlin {
 mavenPublishing {
     pomFromGradleProperties()
     configure(com.vanniktech.maven.publish.KotlinMultiplatform())
-    publishToMavenCentral()
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
 }

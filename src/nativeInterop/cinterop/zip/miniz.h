@@ -4958,6 +4958,7 @@ extern "C" {
 #define NOMINMAX
 #endif
 #include <windows.h>
+#include <wchar.h>
 
 static WCHAR *mz_utf8z_to_widechar(const char *str) {
   int reqChars = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);

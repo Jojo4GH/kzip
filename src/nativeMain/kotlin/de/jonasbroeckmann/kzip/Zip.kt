@@ -1,12 +1,12 @@
 package de.jonasbroeckmann.kzip
 
+import cnames.structs.zip_t
 import kotlinx.cinterop.*
 import kotlinx.io.files.Path
-import kuba.zip.*
-import cnames.structs.zip_t
 import kotlinx.io.Buffer
 import kotlinx.io.Source
 import kotlinx.io.readByteArray
+import libzip.*
 
 
 @OptIn(ExperimentalForeignApi::class)

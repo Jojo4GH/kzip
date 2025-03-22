@@ -1,5 +1,0 @@
-headers = zip/miniz.h zip/zip.h
-headerFilter = zip/*
-
-staticLibraries = libzip.linuxX64.a
-libraryPaths = src/nativeInterop/cinterop
