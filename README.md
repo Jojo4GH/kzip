@@ -34,8 +34,25 @@ A lightweight Kotlin Multiplatform library for reading, writing and modifying ZI
 - 🗜️ Easy **extraction** and **compression** of files and directories
 - 📝 **Modifying** existing ZIP files
 
-The kotlin file I/O interface uses [kotlinx-io](https://github.com/Kotlin/kotlinx-io) making it compatible with other Kotlin Multiplatform libraries.  
-Currently, kzip supports the JVM, Linux, Windows and Android targets, but more targets are planned (see [Contributing](#-contributing)).
+The kotlin file I/O interface uses [kotlinx-io](https://github.com/Kotlin/kotlinx-io) making it compatible with other Kotlin Multiplatform libraries.
+The JVM implementation uses the standard `java.util.zip` while the current native implementation uses the lightweight [kuba--/zip](https://github.com/kuba--/zip).
+
+Currently kzip supports the following targets:
+
+- `jvm`
+- `linuxX64`
+- `linuxArm64`
+- `mingwX64`
+- `androidNativeX64`
+- `androidNativeArm64`
+
+But the following targets are planned (mostly only requiring testing):
+
+- All Apple targets
+- `androidNativeX86`
+- `androidNativeArm32`
+
+More features are planned including support for suspending functions, more access to metadata, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
 
 ## 🛠️ Installation
 
