@@ -29,18 +29,18 @@ private class JavaZip(
                 .also { _zos = it }
     }
 
-    override val numberOfEntries: ULong get() = zip.size().orError().toULong()
+    override val numberOfEntries: Int get() = zip.size().orError()
     private val entries by lazy { zip.entries().toList() }
 
     override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
         val name = Zip.pathToEntryName(entry)
         Entry(zip.getEntry(name) ?: throw JavaZipException("Entry not found: $name")).block()
     }
-    override fun entry(index: ULong, block: Zip.Entry.() -> Unit) {
-        Entry(entries[index.toInt()]).block()
+    override fun entry(index: Int, block: Zip.Entry.() -> Unit) {
+        Entry(entries[index]).block()
     }
 
-    override fun deleteEntries(indices: List<ULong>) {
+    override fun deleteEntriesByIndex(indices: List<Int>) {
         throw UnsupportedOperationException("Deleting entries is not supported on JVM")
     }
     override fun deleteEntries(paths: List<Path>) {
@@ -101,7 +101,7 @@ private fun Long.orError(): ULong {
     return toULong()
 }
 
-private fun Int.orError(): UInt {
+private fun Int.orError(): Int {
     if (this < 0) throw ZipException("Negative value: $this")
-    return toUInt()
+    return this
 }

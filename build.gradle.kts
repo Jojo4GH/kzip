@@ -20,8 +20,12 @@ kotlin {
     jvm()
 
     mingwX64()
+
     linuxX64()
     linuxArm64()
+
+    androidNativeX64()
+    androidNativeArm64()
 
     // Configure cinterop for kuba zip library
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {

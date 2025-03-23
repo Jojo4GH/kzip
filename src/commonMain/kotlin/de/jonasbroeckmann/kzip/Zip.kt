@@ -17,7 +17,7 @@ public interface Zip : AutoCloseable {
     /**
      * The number of entries in the ZIP file.
      */
-    public val numberOfEntries: ULong
+    public val numberOfEntries: Int
 
     /**
      * Obtains an entry in the ZIP file by its path.
@@ -33,7 +33,7 @@ public interface Zip : AutoCloseable {
      * @param index the index of the entry
      * @param block the block to execute on the entry
      */
-    public fun entry(index: ULong, block: Entry.() -> Unit)
+    public fun entry(index: Int, block: Entry.() -> Unit)
 
     /**
      * Deletes entries from the ZIP file.
@@ -51,7 +51,7 @@ public interface Zip : AutoCloseable {
      *
      * @param indices the indices of the entries to delete
      */
-    public fun deleteEntries(indices: List<ULong>)
+    public fun deleteEntriesByIndex(indices: List<Int>)
 
     /**
      * Adds an entry to the ZIP file from a [Source].

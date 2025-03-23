@@ -13,7 +13,7 @@ private class KubaZip(
     private val handle: CPointer<zip_t>,
     override val mode: Zip.Mode
 ) : Zip {
-    override val numberOfEntries: ULong by lazy { zip_entries_total(handle).orZipError() }
+    override val numberOfEntries: Int by lazy { zip_entries_total(handle).orZipError() }
 
     private fun withZipEntry(name: String, block: () -> Unit) {
         zip_entry_open(handle, name).zeroOrZipError()
@@ -29,8 +29,8 @@ private class KubaZip(
             Entry().block()
         }
     }
-    override fun entry(index: ULong, block: Zip.Entry.() -> Unit) {
-        zip_entry_openbyindex(handle, index).zeroOrZipError()
+    override fun entry(index: Int, block: Zip.Entry.() -> Unit) {
+        zip_entry_openbyindex(handle, index.toULong()).zeroOrZipError()
         try {
             Entry().block()
         } finally {
@@ -44,9 +44,9 @@ private class KubaZip(
         val result = zip_entries_delete(handle, names.toCStringArray(this), names.size.toULong())
         if (result <= 0) throwZipError("Failed to delete entries", result)
     }
-    override fun deleteEntries(indices: List<ULong>) = memScoped {
+    override fun deleteEntriesByIndex(indices: List<Int>) = memScoped {
         requireWritable()
-        val result = zip_entries_deletebyindex(handle, indices.toULongArray().toCValues().ptr, indices.size.toULong())
+        val result = zip_entries_deletebyindex(handle, indices.map { it.toULong() }.toULongArray().toCValues().ptr, indices.size.toULong())
         if (result <= 0) throwZipError("Failed to delete entries", result)
     }
 
@@ -122,9 +122,10 @@ private fun Int.zeroOrZipError(msg: () -> String = { "Error" }) {
     if (this != 0) throwZipError(msg(), this)
 }
 
-private fun Long.orZipError(msg: () -> String = { "Error" }): ULong {
+private fun Long.orZipError(msg: () -> String = { "Error" }): Int {
     if (this < 0) throwZipError(msg(), this)
-    return toULong()
+    if (this > Int.MAX_VALUE.toLong()) throwZipError("Value too large ($this)")
+    return toInt()
 }
 
 private fun throwZipError(msg: String, err: Number? = null): Nothing {

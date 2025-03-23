@@ -8,6 +8,8 @@
 [![Linux X64 Platform][linux-x64-platform-badge]][kotlin-native]
 [![Linux ARM64 Platform][linux-arm64-platform-badge]][kotlin-native]
 [![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native]
+[![Android X64 Platform][android-x64-platform-badge]][kotlin-native]
+[![Android ARM64 Platform][android-arm64-platform-badge]][kotlin-native]
 
 [kzip-maven-badge]: https://img.shields.io/maven-central/v/de.jonasbroeckmann.kzip/kzip?label=Latest
 [kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip?cacheSeconds=3600
@@ -16,6 +18,8 @@
 [linux-x64-platform-badge]: https://img.shields.io/badge/Native-Linux_X64-e082f3
 [linux-arm64-platform-badge]: https://img.shields.io/badge/Native-Linux_ARM64-e082f3
 [mingw-x64-platform-badge]: https://img.shields.io/badge/Native-MinGW_X64-e082f3
+[android-x64-platform-badge]: https://img.shields.io/badge/Native-Android_X64-e082f3
+[android-arm64-platform-badge]: https://img.shields.io/badge/Native-Android_ARM64-e082f3
 
 [kzip-maven]: https://central.sonatype.com/artifact/de.jonasbroeckmann.kzip/kzip
 [kotlin-multiplatform]: https://kotlinlang.org/docs/multiplatform.html
@@ -31,7 +35,7 @@ A lightweight Kotlin Multiplatform library for reading, writing and modifying ZI
 - 📝 **Modifying** existing ZIP files
 
 The kotlin file I/O interface uses [kotlinx-io](https://github.com/Kotlin/kotlinx-io) making it compatible with other Kotlin Multiplatform libraries.  
-Currently, kzip supports the JVM, Linux X64, Linux ARM64 and MinGW X64 targets, but more targets are planned (see [Contributing](#-contributing)).
+Currently, kzip supports the JVM, Linux, Windows and Android targets, but more targets are planned (see [Contributing](#-contributing)).
 
 ## 🛠️ Installation
 

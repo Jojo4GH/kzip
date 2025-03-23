@@ -9,8 +9,8 @@ import kotlinx.io.files.SystemFileSystem
  *
  * @param block the block to execute on each index and entry
  */
-public inline fun Zip.forEachEntryIndexed(crossinline block: (ULong, Zip.Entry) -> Unit) {
-    for (i in 0uL until numberOfEntries) {
+public inline fun Zip.forEachEntryIndexed(crossinline block: (Int, Zip.Entry) -> Unit) {
+    for (i in 0 until numberOfEntries) {
         entry(i) { block(i, this) }
     }
 }
