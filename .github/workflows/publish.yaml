@@ -8,9 +8,9 @@ jobs:
     if: ${{ github.repository == 'Jojo4GH/kzip' }}
     steps:
       - uses: actions/checkout@v4
-      - uses: fwilhe2/setup-kotlin@0.2.0
+      - uses: fwilhe2/setup-kotlin@v1.4
         with:
-          version: 2.0.0
+          version: 2.1.20
           install-native: true
       - uses: actions/setup-java@v4
         with:
