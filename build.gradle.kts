@@ -27,6 +27,9 @@ kotlin {
     androidNativeX64()
     androidNativeArm64()
 
+    macosX64()
+    macosArm64()
+
     // Configure cinterop for kuba zip library
     targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
         compilations.getByName("main") {
