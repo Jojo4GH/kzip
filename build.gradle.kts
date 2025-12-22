@@ -1,11 +1,11 @@
 plugins {
-    kotlin("multiplatform") version "2.1.20"
-    id("org.jetbrains.dokka") version "2.0.0"
-    id("com.vanniktech.maven.publish.base") version "0.31.0"
+    kotlin("multiplatform") version "2.3.0"
+    id("org.jetbrains.dokka") version "2.1.0"
+    id("com.vanniktech.maven.publish") version "0.35.0"
 }
 
-group = property("GROUP")!!
-version = property("VERSION_NAME")!!
+group = "de.jonasbroeckmann.kzip"
+version = "1.1.1"
 
 repositories {
     mavenCentral()
@@ -61,8 +61,31 @@ dokka {
 }
 
 mavenPublishing {
-    pomFromGradleProperties()
-    configure(com.vanniktech.maven.publish.KotlinMultiplatform())
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
+    coordinates("$group", name, "$version")
+    pom {
+        name = "Kzip"
+        description = "Lightweight Kotlin Multiplatform library for reading, writing and modifying ZIP files."
+        inceptionYear = "2024"
+        url = "https://github.com/Jojo4GH/kzip"
+        licenses {
+            license {
+                name = "MIT"
+                distribution = "repo"
+            }
+        }
+        scm {
+            url = "https://github.com/Jojo4GH/"
+            connection = "scm:git:git://github.com/Jojo4GH/kzip.git"
+            developerConnection = "scm:git:ssh://github.com/Jojo4GH/kzip.git"
+        }
+        developers {
+            developer {
+                id = "Jojo4GH"
+                name = "Jonas Broeckmann"
+                url = "https://github.com/Jojo4GH/"
+            }
+        }
+    }
 }
