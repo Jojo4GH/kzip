@@ -45,12 +45,12 @@ Currently kzip supports the following targets:
 - `mingwX64`
 - `androidNativeX64`
 - `androidNativeArm64`
+- `macosX64`
+- `macosArm64`
 
 But the following targets are planned (mostly only requiring testing):
 
-- All Apple targets
-- `androidNativeX86`
-- `androidNativeArm32`
+- Other Apple targets
 
 More features are planned including support for suspending functions, more access to metadata, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
 
