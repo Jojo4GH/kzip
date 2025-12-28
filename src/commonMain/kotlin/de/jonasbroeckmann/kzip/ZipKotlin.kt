@@ -8,6 +8,32 @@ internal const val LOCAL_FILE_HEADER_SIG = 0x04034b50L
 internal const val CENTRAL_DIRECTORY_HEADER_SIG = 0x02014b50L
 internal const val EOCD_SIG = 0x06054b50L
 
+internal sealed interface DataSource {
+    class Memory(val bytes: ByteArray) : DataSource
+    class File(val path: Path) : DataSource
+    class ZipEntry(
+        val zipPath: Path,
+        val localHeaderOffset: Long,
+        val compressedSize: Long,
+        val method: Int
+    ) : DataSource
+}
+
+internal class BoundedSource(
+    private val source: Source,
+    private var remaining: Long
+) : RawSource {
+    override fun readAtMostTo(sink: Buffer, byteCount: Long): Long {
+        if (remaining <= 0L) return -1
+        val toRead = minOf(byteCount, remaining)
+        val read = source.readAtMostTo(sink, toRead)
+        if (read > 0) remaining -= read
+        return read
+    }
+
+    override fun close() = source.close()
+}
+
 internal class ZipKotlin(
     val path: Path,
     override val mode: Zip.Mode,
@@ -17,14 +43,8 @@ internal class ZipKotlin(
     private var isClosed = false
 
     init {
-        when (mode) {
-            Zip.Mode.Read, Zip.Mode.Append -> {
-                readCentralDirectory()
-            }
-
-            Zip.Mode.Write -> {
-                // Start with empty entries
-            }
+        if (mode == Zip.Mode.Read || mode == Zip.Mode.Append) {
+            readCentralDirectory()
         }
     }
 
@@ -32,98 +52,74 @@ internal class ZipKotlin(
         get() = entries.size
 
     private fun readCentralDirectory() {
+        val size = SystemFileSystem.metadataOrNull(path)?.size ?: throw ZipException("File not found: $path")
+        if (size < 22) throw ZipException("Not a ZIP file (too small)")
+
         SystemFileSystem.source(path).buffered().use { source ->
-            // In a real ZIP, we should find EOCD by scanning from the end.
-            // For now, let's assume no comment and read the whole thing?
-            // No, that's bad. But without random access it's hard.
-            // Let's read the whole file into a buffer for now if it's small,
-            // or just read sequentially if we can't seek.
-            // Actually, we can read the whole file to find the EOCD.
+            val searchSize = minOf(size, 65535L + 22L)
+            source.skip(size - searchSize)
             val bytes = source.readByteArray()
-            val buffer = Buffer()
-            buffer.write(bytes)
 
-            val eocdOffset = findEOCD(bytes)
-            if (eocdOffset == -1) throw ZipException("Not a ZIP file (EOCD not found)")
+            var eocdOffsetInBytes = -1
+            for (i in bytes.size - 22 downTo 0) {
+                if (bytes[i] == 0x50.toByte() && bytes[i + 1] == 0x4b.toByte() &&
+                    bytes[i + 2] == 0x05.toByte() && bytes[i + 3] == 0x06.toByte()
+                ) {
+                    eocdOffsetInBytes = i
+                    break
+                }
+            }
+            if (eocdOffsetInBytes == -1) throw ZipException("Not a ZIP file (EOCD not found)")
 
-            val eocdBuffer = Buffer().apply { write(bytes, eocdOffset, bytes.size) }
+            val eocdBuffer = Buffer().apply { write(bytes, eocdOffsetInBytes, bytes.size) }
             eocdBuffer.readIntLe() // sig
             eocdBuffer.readShortLe() // disk number
             eocdBuffer.readShortLe() // disk start
-            val entriesOnDisk = eocdBuffer.readShortLe().toInt() and 0xFFFF
+            eocdBuffer.readShortLe() // entries on disk
             val totalEntries = eocdBuffer.readShortLe().toInt() and 0xFFFF
             val cdSize = eocdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
             val cdOffset = eocdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
 
-            val cdBuffer = Buffer().apply { write(bytes, cdOffset.toInt(), (cdOffset + cdSize).toInt()) }
-            for (i in 0 until totalEntries) {
-                val sig = cdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
-                if (sig != CENTRAL_DIRECTORY_HEADER_SIG) throw ZipException("Invalid Central Directory Header signature")
+            openSourceAt(path, cdOffset).buffered().use { cdSource ->
+                for (i in 0 until totalEntries) {
+                    val sig = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                    if (sig != CENTRAL_DIRECTORY_HEADER_SIG) throw ZipException("Invalid Central Directory Header signature at ${cdOffset + i * 46}")
 
-                cdBuffer.readShortLe() // version made by
-                cdBuffer.readShortLe() // version needed
-                val flags = cdBuffer.readShortLe().toInt() and 0xFFFF
-                val method = cdBuffer.readShortLe().toInt() and 0xFFFF
-                val modTime = cdBuffer.readShortLe().toInt() and 0xFFFF
-                val modDate = cdBuffer.readShortLe().toInt() and 0xFFFF
-                val crc = cdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
-                val compressedSize = cdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
-                val uncompressedSize = cdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
-                val nameLen = cdBuffer.readShortLe().toInt() and 0xFFFF
-                val extraLen = cdBuffer.readShortLe().toInt() and 0xFFFF
-                val commentLen = cdBuffer.readShortLe().toInt() and 0xFFFF
-                cdBuffer.readShortLe() // disk start
-                cdBuffer.readShortLe() // internal attr
-                cdBuffer.readIntLe() // external attr
-                val localHeaderOffset = cdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
+                    cdSource.readShortLe() // version made by
+                    cdSource.readShortLe() // version needed
+                    val flags = cdSource.readShortLe().toInt() and 0xFFFF
+                    val method = cdSource.readShortLe().toInt() and 0xFFFF
+                    cdSource.readShortLe() // mod time
+                    cdSource.readShortLe() // mod date
+                    val crc = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                    val compressedSize = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                    val uncompressedSize = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                    val nameLen = cdSource.readShortLe().toInt() and 0xFFFF
+                    val extraLen = cdSource.readShortLe().toInt() and 0xFFFF
+                    val commentLen = cdSource.readShortLe().toInt() and 0xFFFF
+                    cdSource.readShortLe() // disk start
+                    cdSource.readShortLe() // internal attr
+                    cdSource.readIntLe() // external attr
+                    val localHeaderOffset = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
 
-                val name = cdBuffer.readString(nameLen.toLong())
-                cdBuffer.skip(extraLen.toLong())
-                cdBuffer.skip(commentLen.toLong())
+                    val name = cdSource.readString(nameLen.toLong())
+                    cdSource.skip(extraLen.toLong() + commentLen.toLong())
 
-                val entryData = extractDataFromBytes(bytes, localHeaderOffset, compressedSize.toInt())
-
-                entries.add(
-                    ZipKotlinEntry(
-                        this,
-                        name,
-                        method,
-                        compressedSize.toULong(),
-                        uncompressedSize.toULong(),
-                        crc,
-                        localHeaderOffset
-                    ).apply {
-                        this.data = entryData
-                    })
+                    entries.add(
+                        ZipKotlinEntry(
+                            this,
+                            name,
+                            method,
+                            compressedSize.toULong(),
+                            uncompressedSize.toULong(),
+                            crc,
+                            localHeaderOffset,
+                            DataSource.ZipEntry(path, localHeaderOffset, compressedSize, method)
+                        )
+                    )
+                }
             }
         }
-    }
-
-    private fun extractDataFromBytes(bytes: ByteArray, offset: Long, size: Int): ByteArray {
-        val buffer = Buffer().apply { write(bytes, offset.toInt(), bytes.size) }
-        val sig = buffer.readIntLe().toLong() and 0xFFFFFFFFL
-        if (sig != LOCAL_FILE_HEADER_SIG) throw ZipException("Invalid Local File Header signature at $offset")
-        buffer.skip(22) // skip to nameLen
-        val nameLen = buffer.readShortLe().toInt() and 0xFFFF
-        val extraLen = buffer.readShortLe().toInt() and 0xFFFF
-        val dataOffset = offset.toInt() + 30 + nameLen + extraLen
-        val result = ByteArray(size)
-        bytes.copyInto(result, 0, dataOffset, dataOffset + size)
-        return result
-    }
-
-    private fun findEOCD(bytes: ByteArray): Int {
-        // Search from the end for EOCD signature
-        for (i in bytes.size - 22 downTo 0) {
-            if (bytes[i] == 0x50.toByte() &&
-                bytes[i + 1] == 0x4b.toByte() &&
-                bytes[i + 2] == 0x05.toByte() &&
-                bytes[i + 3] == 0x06.toByte()
-            ) {
-                return i
-            }
-        }
-        return -1
     }
 
     override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
@@ -158,37 +154,34 @@ internal class ZipKotlin(
     override fun entryFromSource(entry: Path, data: Source) {
         requireWritable()
         val bytes = data.readByteArray()
-        addEntry(Zip.pathToEntryName(entry), bytes, false)
+        addEntry(Zip.pathToEntryName(entry), DataSource.Memory(bytes), bytes.size.toULong(), false)
     }
 
     override fun entryFromPath(entry: Path, file: Path) {
         requireWritable()
         file.requireFile()
-        val bytes = SystemFileSystem.source(file).buffered().use { it.readByteArray() }
-        addEntry(Zip.pathToEntryName(entry), bytes, false)
+        val size = SystemFileSystem.metadataOrNull(file)?.size ?: 0L
+        addEntry(Zip.pathToEntryName(entry), DataSource.File(file), size.toULong(), false)
     }
 
     override fun folderEntry(entry: Path) {
         requireWritable()
-        addEntry(Zip.pathToFolderEntryName(entry), byteArrayOf(), true)
+        addEntry(Zip.pathToFolderEntryName(entry), DataSource.Memory(byteArrayOf()), 0uL, true)
     }
 
-    private fun addEntry(name: String, data: ByteArray, isDirectory: Boolean) {
-        // For now, we just add to the list and write everything on close.
-        // In a more efficient implementation, we would write the local header and data immediately.
+    private fun addEntry(name: String, dataSource: DataSource, size: ULong, isDirectory: Boolean) {
         val existing = entries.find { it.pathName == name }
         val newEntry = ZipKotlinEntry(
             this,
             name,
-            if (isDirectory) 0 else 0, // STORED for now
-            data.size.toULong(),
-            data.size.toULong(),
-            crc32(data),
-            0 // offset will be calculated on write
-        ).apply {
-            this.data = data
-            this.isDir = isDirectory
-        }
+            0, // STORED
+            size,
+            size,
+            0,
+            0,
+            dataSource,
+            isDirectory
+        )
 
         if (existing != null) {
             entries[entries.indexOf(existing)] = newEntry
@@ -206,128 +199,174 @@ internal class ZipKotlin(
     }
 
     private fun writeZip() {
-        SystemFileSystem.sink(path).buffered().use { sink ->
-            val cdEntries = mutableListOf<ZipKotlinEntry>()
-            var currentOffset = 0L
+        val tempPath = Path(path.toString() + ".tmp")
+        try {
+            SystemFileSystem.sink(tempPath).buffered().use { sink ->
+                val cdEntries = mutableListOf<ZipKotlinEntry>()
+                var currentOffset = 0L
 
-            for (entry in entries) {
-                val offset = currentOffset
-                val data = entry.data ?: readEntryData(entry)
+                for (entry in entries) {
+                    val offset = currentOffset
+                    val (crc, size) = writeEntryData(entry, sink)
 
-                // Write Local File Header
-                sink.writeIntLe(LOCAL_FILE_HEADER_SIG.toInt())
-                sink.writeShortLe(20) // version needed
-                sink.writeShortLe(0) // flags
-                sink.writeShortLe(entry.method.toShort())
-                sink.writeShortLe(0) // mod time
-                sink.writeShortLe(0) // mod date
-                sink.writeIntLe(entry.crc32.toInt())
-                sink.writeIntLe(entry.compressedSize.toInt())
-                sink.writeIntLe(entry.uncompressedSize.toInt())
-                sink.writeShortLe(entry.pathName.length.toShort())
-                sink.writeShortLe(0) // extra len
-                sink.writeString(entry.pathName)
-                // No extra field
+                    val entryWithOffset = entry.copy(
+                        localHeaderOffset = offset,
+                        crc32 = crc,
+                        compressedSize = size,
+                        uncompressedSize = size
+                    ).apply {
+                        this.dataSource = entry.dataSource
+                        this.isDir = entry.isDir
+                    }
+                    cdEntries.add(entryWithOffset)
 
-                sink.write(data)
+                    currentOffset += 30 + entry.pathName.length + size.toLong()
+                }
 
-                val entryWithOffset = entry.copy(localHeaderOffset = offset)
-                cdEntries.add(entryWithOffset)
+                val cdOffset = currentOffset
+                var cdSize = 0L
+                for (entry in cdEntries) {
+                    sink.writeIntLe(CENTRAL_DIRECTORY_HEADER_SIG.toInt())
+                    sink.writeShortLe(20) // made by
+                    sink.writeShortLe(20) // needed
+                    sink.writeShortLe(0) // flags
+                    sink.writeShortLe(entry.method.toShort())
+                    sink.writeShortLe(0) // mod time
+                    sink.writeShortLe(0) // mod date
+                    sink.writeIntLe(entry.crc32.toInt())
+                    sink.writeIntLe(entry.compressedSize.toInt())
+                    sink.writeIntLe(entry.uncompressedSize.toInt())
+                    sink.writeShortLe(entry.pathName.length.toShort())
+                    sink.writeShortLe(0) // extra len
+                    sink.writeShortLe(0) // comment len
+                    sink.writeShortLe(0) // disk start
+                    sink.writeShortLe(0) // internal attr
+                    sink.writeIntLe(0) // external attr
+                    sink.writeIntLe(entry.localHeaderOffset.toInt())
+                    sink.writeString(entry.pathName)
 
-                currentOffset += 30 + entry.pathName.length + data.size
-            }
+                    cdSize += 46 + entry.pathName.length
+                }
 
-            val cdOffset = currentOffset
-            var cdSize = 0L
-            for (entry in cdEntries) {
-                sink.writeIntLe(CENTRAL_DIRECTORY_HEADER_SIG.toInt())
-                sink.writeShortLe(20) // made by
-                sink.writeShortLe(20) // needed
-                sink.writeShortLe(0) // flags
-                sink.writeShortLe(entry.method.toShort())
-                sink.writeShortLe(0) // mod time
-                sink.writeShortLe(0) // mod date
-                sink.writeIntLe(entry.crc32.toInt())
-                sink.writeIntLe(entry.compressedSize.toInt())
-                sink.writeIntLe(entry.uncompressedSize.toInt())
-                sink.writeShortLe(entry.pathName.length.toShort())
-                sink.writeShortLe(0) // extra len
-                sink.writeShortLe(0) // comment len
+                sink.writeIntLe(EOCD_SIG.toInt())
+                sink.writeShortLe(0) // disk number
                 sink.writeShortLe(0) // disk start
-                sink.writeShortLe(0) // internal attr
-                sink.writeIntLe(0) // external attr
-                sink.writeIntLe(entry.localHeaderOffset.toInt())
-                sink.writeString(entry.pathName)
-
-                cdSize += 46 + entry.pathName.length
+                sink.writeShortLe(cdEntries.size.toShort())
+                sink.writeShortLe(cdEntries.size.toShort())
+                sink.writeIntLe(cdSize.toInt())
+                sink.writeIntLe(cdOffset.toInt())
+                sink.writeShortLe(0) // comment len
             }
-
-            // Write EOCD
-            sink.writeIntLe(EOCD_SIG.toInt())
-            sink.writeShortLe(0) // disk number
-            sink.writeShortLe(0) // disk start
-            sink.writeShortLe(cdEntries.size.toShort())
-            sink.writeShortLe(cdEntries.size.toShort())
-            sink.writeIntLe(cdSize.toInt())
-            sink.writeIntLe(cdOffset.toInt())
-            sink.writeShortLe(0) // comment len
+            SystemFileSystem.atomicMove(tempPath, path)
+        } finally {
+            if (SystemFileSystem.exists(tempPath)) SystemFileSystem.delete(tempPath)
         }
     }
 
-    internal fun readEntryData(entry: ZipKotlinEntry): ByteArray {
-        if (entry.data != null) return entry.data!!
+    private fun writeEntryData(entry: ZipKotlinEntry, sink: Sink): Pair<Long, ULong> {
+        val dataSource = entry.dataSource!!
+        val crc = Crc32()
+        var size = 0uL
 
-        SystemFileSystem.source(path).buffered().use { source ->
-            source.skip(entry.localHeaderOffset)
-            val sig = source.readIntLe().toLong() and 0xFFFFFFFFL
-            if (sig != LOCAL_FILE_HEADER_SIG) throw ZipException("Invalid Local File Header signature at ${entry.localHeaderOffset}")
+        val finalCrc: Long
+        val finalSize: ULong
 
-            source.skip(22) // skip to name len
-            val nameLen = source.readShortLe().toInt() and 0xFFFF
-            val extraLen = source.readShortLe().toInt() and 0xFFFF
-            source.skip(nameLen.toLong() + extraLen.toLong())
+        if (dataSource is DataSource.Memory) {
+            finalCrc = Crc32.calculate(dataSource.bytes)
+            finalSize = dataSource.bytes.size.toULong()
+        } else {
+            // Pass 1: Calculate CRC and Size
+            val s1 = when (dataSource) {
+                is DataSource.File -> openSourceAt(dataSource.path, 0L).buffered()
+                is DataSource.ZipEntry -> entry.readToSource()
+                is DataSource.Memory -> throw IllegalStateException()
+            }
+            s1.use { s ->
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val read = s.readAtMostTo(buffer)
+                    if (read == -1) break
+                    crc.update(buffer, 0, read)
+                    size += read.toULong()
+                }
+            }
+            finalCrc = crc.getValue()
+            finalSize = size
+        }
 
-            val data = source.readByteArray(entry.compressedSize.toInt())
-            if (entry.method == 0) {
-                return data
-            } else {
-                throw ZipException("Unsupported compression method: ${entry.method}")
+        // Pass 2: Write data
+        val s2 = when (dataSource) {
+            is DataSource.Memory -> Buffer().apply { write(dataSource.bytes) }
+            is DataSource.File -> openSourceAt(dataSource.path, 0L).buffered()
+            is DataSource.ZipEntry -> entry.readToSource()
+        }
+
+        s2.use { s ->
+            sink.writeIntLe(LOCAL_FILE_HEADER_SIG.toInt())
+            sink.writeShortLe(20)
+            sink.writeShortLe(0)
+            sink.writeShortLe(entry.method.toShort())
+            sink.writeShortLe(0)
+            sink.writeShortLe(0)
+            sink.writeIntLe(finalCrc.toInt())
+            sink.writeIntLe(finalSize.toInt())
+            sink.writeIntLe(finalSize.toInt())
+            sink.writeShortLe(entry.pathName.length.toShort())
+            sink.writeShortLe(0)
+            sink.writeString(entry.pathName)
+
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = s.readAtMostTo(buffer)
+                if (read == -1) break
+                sink.write(buffer, 0, read)
+            }
+        }
+
+        return Pair(finalCrc, finalSize)
+    }
+
+    internal data class ZipKotlinEntry(
+        val zip: ZipKotlin,
+        val pathName: String,
+        val method: Int,
+        override val compressedSize: ULong,
+        override val uncompressedSize: ULong,
+        override val crc32: Long,
+        val localHeaderOffset: Long,
+        internal var dataSource: DataSource? = null,
+        internal var isDir: Boolean = pathName.endsWith('/')
+    ) : Zip.Entry {
+        override val path: Path get() = Zip.entryNameToPath(pathName)
+        override val isDirectory: Boolean get() = isDir
+
+        override fun readToSource(): Source {
+            return when (val ds = dataSource!!) {
+                is DataSource.Memory -> Buffer().apply { write(ds.bytes) }
+                is DataSource.File -> SystemFileSystem.source(ds.path).buffered()
+                is DataSource.ZipEntry -> {
+                    val s = openSourceAt(ds.zipPath, ds.localHeaderOffset).buffered()
+                    val sig = s.readIntLe().toLong() and 0xFFFFFFFFL
+                    if (sig != LOCAL_FILE_HEADER_SIG) throw ZipException("Invalid Local File Header at ${ds.localHeaderOffset}")
+                    s.skip(22)
+                    val nLen = s.readShortLe().toInt() and 0xFFFF
+                    val eLen = s.readShortLe().toInt() and 0xFFFF
+                    s.skip(nLen.toLong() + eLen.toLong())
+                    BoundedSource(s, ds.compressedSize).buffered()
+                }
+            }
+        }
+
+        override fun readToBytes(): ByteArray = readToSource().use { it.readByteArray() }
+
+        override fun readToPath(path: Path) {
+            readToSource().use { source ->
+                SystemFileSystem.sink(path).buffered().use { sink ->
+                    source.transferTo(sink)
+                }
             }
         }
     }
-}
-
-internal data class ZipKotlinEntry(
-    val zip: ZipKotlin,
-    val pathName: String,
-    val method: Int,
-    override val compressedSize: ULong,
-    override val uncompressedSize: ULong,
-    override val crc32: Long,
-    val localHeaderOffset: Long
-) : Zip.Entry {
-    override val path: Path get() = Zip.entryNameToPath(pathName)
-    internal var isDir: Boolean = pathName.endsWith('/')
-    override val isDirectory: Boolean get() = isDir
-
-    internal var data: ByteArray? = null
-
-    override fun readToSource(): Source = Buffer().apply { write(readToBytes()) }
-    override fun readToBytes(): ByteArray = zip.readEntryData(this)
-    override fun readToPath(path: Path) {
-        SystemFileSystem.sink(path).buffered().use { it.write(readToBytes()) }
-    }
-}
-
-internal fun crc32(data: ByteArray): Long {
-    var crc = 0xFFFFFFFFL
-    for (b in data) {
-        crc = crc xor (b.toInt() and 0xFF).toLong()
-        for (i in 0 until 8) {
-            crc = if (crc and 1L != 0L) (crc ushr 1) xor 0xEDB88320L else crc ushr 1
-        }
-    }
-    return crc xor 0xFFFFFFFFL
 }
 
 public fun Zip.Companion.openKotlin(
