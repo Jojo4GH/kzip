@@ -25,3 +25,5 @@ out/
 
 ### Mac OS ###
 .DS_Store
+/.output.txt
+/benchmark_output.txt

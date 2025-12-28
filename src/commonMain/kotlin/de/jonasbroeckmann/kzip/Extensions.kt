@@ -52,13 +52,11 @@ public fun Zip.extractTo(directory: Path) {
 public fun Zip.compressFrom(path: Path, pathInZip: Path? = null) {
     val metadata = SystemFileSystem.metadataOrNull(path) ?: throw IOException("Cannot read metadata of $path")
     if (metadata.isDirectory) {
-        println("Compressing directory $pathInZip")
         if (pathInZip != null) folderEntry(pathInZip)
         SystemFileSystem.list(path).forEach { child ->
             compressFrom(child, pathInZip?.let { Path(it, child.name) } ?: Path(child.name))
         }
     } else if (metadata.isRegularFile) {
-        println("Compressing file $pathInZip")
         if (pathInZip != null) entryFromPath(pathInZip, path)
     } else {
         throw UnsupportedOperationException("Unsupported file type at $path")
