@@ -1,5 +1,6 @@
 package de.jonasbroeckmann.kzip
 
+import kotlinx.io.RawSource
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
@@ -40,3 +41,5 @@ internal fun Path.requireFile() {
         throw IllegalArgumentException("File does not exist or is not a regular file: $this")
     }
 }
+
+internal expect fun openSourceAt(path: Path, offset: Long): RawSource
