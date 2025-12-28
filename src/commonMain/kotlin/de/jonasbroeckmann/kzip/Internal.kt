@@ -6,7 +6,7 @@ import kotlinx.io.files.SystemFileSystem
 
 private const val ZipEntryNameSeparator = '/'
 
-internal fun Zip.Companion.pathToEntryName(path: Path): String {
+internal fun pathToEntryName(path: Path): String {
     if (path.isAbsolute) throw IllegalArgumentException("Path for zip entry must be relative: $path")
     path.parent?.let { parent ->
         return "${pathToEntryName(parent)}$ZipEntryNameSeparator${path.name}"
@@ -14,11 +14,11 @@ internal fun Zip.Companion.pathToEntryName(path: Path): String {
     return path.name
 }
 
-internal fun Zip.Companion.pathToFolderEntryName(path: Path): String {
+internal fun pathToFolderEntryName(path: Path): String {
     return "${pathToEntryName(path)}$ZipEntryNameSeparator"
 }
 
-internal fun Zip.Companion.entryNameToPath(name: String): Path {
+internal fun entryNameToPath(name: String): Path {
     val elements = name.split(ZipEntryNameSeparator)
     return Path(
         elements.first(),

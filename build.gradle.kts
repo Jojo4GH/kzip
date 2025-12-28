@@ -34,26 +34,12 @@ kotlin {
     iosX64()
     iosSimulatorArm64()
 
-    // Configure cinterop for kuba zip library
-    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
-        compilations.getByName("main") {
-            cinterops {
-                cinterops.create("zip") {
-                    includeDirs("src/nativeInterop/cinterop")
-                }
-            }
-        }
-    }
-
     sourceSets {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.4")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
-        }
-        jvmMain.dependencies {
-            implementation("net.lingala.zip4j:zip4j:2.11.5")
         }
     }
 }
