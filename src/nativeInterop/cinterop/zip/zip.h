@@ -96,20 +96,22 @@ typedef long ssize_t; /* byte count or error */
 #define ZIP_ERINIT -30      // cannot initialize reader
 #define ZIP_EWINIT -31      // cannot initialize writer
 #define ZIP_EWRINIT -32     // cannot initialize writer from reader
+#define ZIP_EINVAL -33      // invalid argument
+#define ZIP_ENORITER -34    // cannot initialize reader iterator
 
 /**
  * Looks up the error message string corresponding to an error number.
  * @param errnum error number
- * @return error message string corresponding to errnum or NULL if error is not
- * found.
+ * @return error message string corresponding to errnum or NULL if error is
+ * not found.
  */
 extern ZIP_EXPORT const char *zip_strerror(int errnum);
 
 /**
  * @struct zip_t
  *
- * This data structure is used throughout the library to represent zip archive -
- * forward declaration.
+ * This data structure is used throughout the library to represent zip archive
+ * - forward declaration.
  */
 struct zip_t;
 
@@ -204,7 +206,8 @@ extern ZIP_EXPORT int zip_entry_opencasesensitive(struct zip_t *zip,
 /**
  * Opens a new entry by index in the zip archive.
  *
- * This function is only valid if zip archive was opened in 'r' (readonly) mode.
+ * This function is only valid if zip archive was opened in 'r' (readonly)
+ * mode.
  *
  * @param zip zip archive handler.
  * @param index index in local dictionary.
@@ -367,11 +370,32 @@ extern ZIP_EXPORT ssize_t zip_entry_read(struct zip_t *zip, void **buf,
  *       For large entries, please take a look at zip_entry_extract function.
  *
  * @return the return code - the number of bytes actually read on success.
- *         Otherwise a negative number (< 0) on error (e.g. bufsize is not large
- * enough).
+ *         Otherwise a negative number (< 0) on error (e.g. bufsize is not
+ * large enough).
  */
 extern ZIP_EXPORT ssize_t zip_entry_noallocread(struct zip_t *zip, void *buf,
                                                 size_t bufsize);
+
+/**
+ * Extracts the part of the current zip entry into a memory buffer using no
+ * memory allocation for the buffer.
+ *
+ * @param zip zip archive handler.
+ * @param offset the offset of the entry (in bytes).
+ * @param size requested number of bytes (in bytes).
+ * @param buf preallocated output buffer.
+ *
+ * @note the iterator api uses an allocation to create its state
+ * @note each call will iterate from the start of the entry
+ *
+ * @return the return code - the number of bytes actually read on success.
+ *         Otherwise a negative number (< 0) on error (e.g. offset is too
+ * large).
+ */
+extern ZIP_EXPORT ssize_t zip_entry_noallocreadwithoffset(struct zip_t *zip,
+                                                          size_t offset,
+                                                          size_t size,
+                                                          void *buf);
 
 /**
  * Extracts the current zip entry into output file.
@@ -400,7 +424,8 @@ zip_entry_extract(struct zip_t *zip,
                   void *arg);
 
 /**
- * Returns the number of all entries (files and directories) in the zip archive.
+ * Returns the number of all entries (files and directories) in the zip
+ * archive.
  *
  * @param zip zip archive handler.
  *
@@ -512,8 +537,8 @@ extern ZIP_EXPORT ssize_t zip_stream_copy(struct zip_t *zip, void **buf,
 extern ZIP_EXPORT void zip_stream_close(struct zip_t *zip);
 
 /**
- * Opens zip archive from existing FILE stream with compression level using the
- * given mode. The stream will not be closed when calling zip_close.
+ * Opens zip archive from existing FILE stream with compression level using
+ * the given mode. The stream will not be closed when calling zip_close.
  *
  * @param stream C FILE stream.
  * @param level compression level (0-9 are the standard zlib-style levels).
@@ -529,9 +554,9 @@ extern ZIP_EXPORT struct zip_t *zip_cstream_open(FILE *stream, int level,
                                                  char mode);
 
 /**
- * Opens zip archive from existing FILE stream with compression level using the
- * given mode. The function additionally returns @param errnum - The stream will
- * not be closed when calling zip_close.
+ * Opens zip archive from existing FILE stream with compression level using
+ * the given mode. The function additionally returns @param errnum - The
+ * stream will not be closed when calling zip_close.
  *
  * @param stream C FILE stream.
  * @param level compression level (0-9 are the standard zlib-style levels).
