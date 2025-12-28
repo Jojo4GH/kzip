@@ -3,78 +3,106 @@ package de.jonasbroeckmann.kzip
 import kotlinx.io.*
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.model.ZipParameters
+import net.lingala.zip4j.model.enums.CompressionLevel as Zip4jCompressionLevel
+import net.lingala.zip4j.model.enums.CompressionMethod
 import java.io.File
-import java.util.zip.ZipOutputStream
-import java.util.zip.ZipEntry as JavaZipEntry
-import java.util.zip.ZipException as JavaZipException
-import java.util.zip.ZipFile as JavaZipFile
+import java.io.ByteArrayInputStream
 
 private class JavaZip(
-    private val zipFile: Path,
+    private val zipPath: Path,
     override val mode: Zip.Mode,
     private val level: Zip.CompressionLevel
 ) : Zip {
-    private var _zip: JavaZipFile? = null
-    private val zip: JavaZipFile get() {
-        requireReadable()
-        return _zip ?: JavaZipFile(File(zipFile.toString())).also { _zip = it }
+    private val zipFile = ZipFile(File(zipPath.toString()))
+
+    init {
+        if (mode == Zip.Mode.Read && !zipFile.file.exists()) {
+            throw ZipException("File does not exist: $zipPath")
+        }
+        if (mode == Zip.Mode.Write && zipFile.file.exists()) {
+            zipFile.file.delete()
+        }
     }
 
-    private var _zos: ZipOutputStream? = null
-    private val zos: ZipOutputStream get() {
-        requireWritable()
-        return _zos
-            ?: ZipOutputStream(SystemFileSystem.sink(zipFile).buffered().asOutputStream())
-                .apply { setLevel(level.zlibLevel) }
-                .also { _zos = it }
-    }
-
-    override val numberOfEntries: Int get() = zip.size().orError()
-    private val entries by lazy { zip.entries().toList() }
+    override val numberOfEntries: Int get() = zipFile.fileHeaders.size
 
     override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
         val name = Zip.pathToEntryName(entry)
-        Entry(zip.getEntry(name) ?: throw JavaZipException("Entry not found: $name")).block()
+        val fileHeader = zipFile.getFileHeader(name) ?: throw ZipException("Entry not found: $name")
+        Entry(fileHeader).block()
     }
+
     override fun entry(index: Int, block: Zip.Entry.() -> Unit) {
-        Entry(entries[index]).block()
+        val fileHeader = zipFile.fileHeaders[index]
+        Entry(fileHeader).block()
+    }
+
+    override fun deleteEntries(paths: List<Path>) {
+        requireWritable()
+        paths.forEach { zipFile.removeFile(Zip.pathToEntryName(it)) }
     }
 
     override fun deleteEntriesByIndex(indices: List<Int>) {
-        throw UnsupportedOperationException("Deleting entries is not supported on JVM")
-    }
-    override fun deleteEntries(paths: List<Path>) {
-        throw UnsupportedOperationException("Deleting entries is not supported on JVM")
+        requireWritable()
+        val headers = zipFile.fileHeaders
+        indices.sortedDescending().forEach { index ->
+            zipFile.removeFile(headers[index])
+        }
     }
 
     override fun entryFromSource(entry: Path, data: Source) {
-        zos.putNextEntry(JavaZipEntry(Zip.pathToEntryName(entry)))
-        data.transferTo(zos.asSink())
+        requireWritable()
+        val parameters = ZipParameters().apply {
+            fileNameInZip = Zip.pathToEntryName(entry)
+            compressionMethod = CompressionMethod.DEFLATE
+            compressionLevel = mapCompressionLevel(level)
+        }
+        zipFile.addStream(data.asInputStream(), parameters)
     }
+
     override fun entryFromPath(entry: Path, file: Path) {
+        requireWritable()
         file.requireFile()
-        zos.putNextEntry(JavaZipEntry(Zip.pathToEntryName(entry)))
-        SystemFileSystem.source(file).buffered().use { it.transferTo(zos.asSink()) }
+        val parameters = ZipParameters().apply {
+            fileNameInZip = Zip.pathToEntryName(entry)
+            compressionMethod = CompressionMethod.DEFLATE
+            compressionLevel = mapCompressionLevel(level)
+        }
+        zipFile.addFile(File(file.toString()), parameters)
     }
+
     override fun folderEntry(entry: Path) {
-        zos.putNextEntry(JavaZipEntry(Zip.pathToEntryName(entry) + '/'))
+        requireWritable()
+        val parameters = ZipParameters().apply {
+            fileNameInZip = Zip.pathToFolderEntryName(entry)
+            compressionMethod = CompressionMethod.STORE
+        }
+        zipFile.addStream(ByteArrayInputStream(ByteArray(0)), parameters)
     }
 
     override fun close() {
-        _zos?.close()
-        _zos = null
-        _zip?.close()
-        _zip = null
+        zipFile.close()
     }
 
-    private inner class Entry(private val entry: JavaZipEntry) : Zip.Entry {
-        override val path: Path by lazy { Zip.entryNameToPath(entry.name) }
-        override val isDirectory: Boolean get() = entry.isDirectory
-        override val uncompressedSize: ULong get() = entry.size.orError()
-        override val compressedSize: ULong get() = entry.compressedSize.orError()
-        override val crc32: Long get() = entry.crc
+    private fun mapCompressionLevel(level: Zip.CompressionLevel): Zip4jCompressionLevel = when (level.zlibLevel) {
+        0 -> Zip4jCompressionLevel.NO_COMPRESSION
+        in 1..2 -> Zip4jCompressionLevel.FASTEST
+        in 3..4 -> Zip4jCompressionLevel.FAST
+        in 5..6 -> Zip4jCompressionLevel.NORMAL
+        in 7..8 -> Zip4jCompressionLevel.MAXIMUM
+        else -> Zip4jCompressionLevel.ULTRA
+    }
 
-        override fun readToSource(): Source = zip.getInputStream(entry).asSource().buffered()
+    private inner class Entry(private val header: net.lingala.zip4j.model.FileHeader) : Zip.Entry {
+        override val path: Path get() = Zip.entryNameToPath(header.fileName)
+        override val isDirectory: Boolean get() = header.isDirectory
+        override val uncompressedSize: ULong get() = header.uncompressedSize.toULong()
+        override val compressedSize: ULong get() = header.compressedSize.toULong()
+        override val crc32: Long get() = header.crc
+
+        override fun readToSource(): Source = zipFile.getInputStream(header).asSource().buffered()
         override fun readToBytes(): ByteArray = readToSource().use { it.readByteArray() }
         override fun readToPath(path: Path) {
             readToSource().use { source ->
@@ -91,17 +119,7 @@ public actual fun Zip.Companion.open(
     mode: Zip.Mode,
     level: Zip.CompressionLevel
 ): Zip = JavaZip(
-    zipFile = path,
+    zipPath = path,
     mode = mode,
     level = level
 )
-
-private fun Long.orError(): ULong {
-    if (this < 0) throw ZipException("Negative value: $this")
-    return toULong()
-}
-
-private fun Int.orError(): Int {
-    if (this < 0) throw ZipException("Negative value: $this")
-    return this
-}
