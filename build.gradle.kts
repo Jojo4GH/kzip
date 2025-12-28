@@ -49,6 +49,9 @@ kotlin {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.4")
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
         jvmMain.dependencies {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
         }
