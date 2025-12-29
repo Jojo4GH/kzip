@@ -70,68 +70,72 @@ public class Zip(
         val size = SystemFileSystem.metadataOrNull(path)?.size ?: throw ZipException("File not found: $path")
         if (size < 22) throw ZipException("Not a ZIP file (too small)")
 
-        SystemFileSystem.source(path).buffered().use { source ->
-            val searchSize = minOf(size, 65535L + 22L)
-            source.skip(size - searchSize)
-            val bytes = source.readByteArray()
+        SystemFileSystem.source(path).use { rawSource ->
+            rawSource.buffered().use { source ->
+                val searchSize = minOf(size, 65535L + 22L)
+                source.skip(size - searchSize)
+                val bytes = source.readByteArray()
 
-            var eocdOffsetInBytes = -1
-            for (i in bytes.size - 22 downTo 0) {
-                if (bytes[i] == 0x50.toByte() && bytes[i + 1] == 0x4b.toByte() &&
-                    bytes[i + 2] == 0x05.toByte() && bytes[i + 3] == 0x06.toByte()
-                ) {
-                    eocdOffsetInBytes = i
-                    break
+                var eocdOffsetInBytes = -1
+                for (i in bytes.size - 22 downTo 0) {
+                    if (bytes[i] == 0x50.toByte() && bytes[i + 1] == 0x4b.toByte() &&
+                        bytes[i + 2] == 0x05.toByte() && bytes[i + 3] == 0x06.toByte()
+                    ) {
+                        eocdOffsetInBytes = i
+                        break
+                    }
                 }
-            }
-            if (eocdOffsetInBytes == -1) throw ZipException("Not a ZIP file (EOCD not found)")
+                if (eocdOffsetInBytes == -1) throw ZipException("Not a ZIP file (EOCD not found)")
 
-            val eocdBuffer = Buffer().apply { write(bytes, eocdOffsetInBytes, bytes.size) }
-            eocdBuffer.readIntLe() // sig
-            eocdBuffer.readShortLe() // disk number
-            eocdBuffer.readShortLe() // disk start
-            eocdBuffer.readShortLe() // entries on disk
-            val totalEntries = eocdBuffer.readShortLe().toInt() and 0xFFFF
-            val cdSize = eocdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
-            val cdOffset = eocdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
+                val eocdBuffer = Buffer().apply { write(bytes, eocdOffsetInBytes, bytes.size) }
+                eocdBuffer.readIntLe() // sig
+                eocdBuffer.readShortLe() // disk number
+                eocdBuffer.readShortLe() // disk start
+                eocdBuffer.readShortLe() // entries on disk
+                val totalEntries = eocdBuffer.readShortLe().toInt() and 0xFFFF
+                val cdSize = eocdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
+                val cdOffset = eocdBuffer.readIntLe().toLong() and 0xFFFFFFFFL
 
-            openSourceAt(path, cdOffset).buffered().use { cdSource ->
-                for (i in 0 until totalEntries) {
-                    val sig = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
-                    if (sig != CENTRAL_DIRECTORY_HEADER_SIG) throw ZipException("Invalid Central Directory Header signature at ${cdOffset + i * 46}")
+                openSourceAt(path, cdOffset).use { cdRawSource ->
+                    cdRawSource.buffered().use { cdSource ->
+                        for (i in 0 until totalEntries) {
+                            val sig = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                            if (sig != CENTRAL_DIRECTORY_HEADER_SIG) throw ZipException("Invalid Central Directory Header signature at ${cdOffset + i * 46}")
 
-                    cdSource.readShortLe() // version made by
-                    cdSource.readShortLe() // version needed
-                    val flags = cdSource.readShortLe().toInt() and 0xFFFF
-                    val method = cdSource.readShortLe().toInt() and 0xFFFF
-                    cdSource.readShortLe() // mod time
-                    cdSource.readShortLe() // mod date
-                    val crc = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
-                    val compressedSize = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
-                    val uncompressedSize = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
-                    val nameLen = cdSource.readShortLe().toInt() and 0xFFFF
-                    val extraLen = cdSource.readShortLe().toInt() and 0xFFFF
-                    val commentLen = cdSource.readShortLe().toInt() and 0xFFFF
-                    cdSource.readShortLe() // disk start
-                    cdSource.readShortLe() // internal attr
-                    cdSource.readIntLe() // external attr
-                    val localHeaderOffset = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                            cdSource.readShortLe() // version made by
+                            cdSource.readShortLe() // version needed
+                            val flags = cdSource.readShortLe().toInt() and 0xFFFF
+                            val method = cdSource.readShortLe().toInt() and 0xFFFF
+                            cdSource.readShortLe() // mod time
+                            cdSource.readShortLe() // mod date
+                            val crc = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                            val compressedSize = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                            val uncompressedSize = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
+                            val nameLen = cdSource.readShortLe().toInt() and 0xFFFF
+                            val extraLen = cdSource.readShortLe().toInt() and 0xFFFF
+                            val commentLen = cdSource.readShortLe().toInt() and 0xFFFF
+                            cdSource.readShortLe() // disk start
+                            cdSource.readShortLe() // internal attr
+                            cdSource.readIntLe() // external attr
+                            val localHeaderOffset = cdSource.readIntLe().toLong() and 0xFFFFFFFFL
 
-                    val name = cdSource.readString(nameLen.toLong())
-                    cdSource.skip(extraLen.toLong() + commentLen.toLong())
+                            val name = cdSource.readString(nameLen.toLong())
+                            cdSource.skip(extraLen.toLong() + commentLen.toLong())
 
-                    entries.add(
-                        ZipEntry(
-                            this,
-                            name,
-                            method,
-                            compressedSize.toULong(),
-                            uncompressedSize.toULong(),
-                            crc,
-                            localHeaderOffset,
-                            DataSource.ZipEntry(path, localHeaderOffset, compressedSize, method)
-                        )
-                    )
+                            entries.add(
+                                ZipEntry(
+                                    this,
+                                    name,
+                                    method,
+                                    compressedSize.toULong(),
+                                    uncompressedSize.toULong(),
+                                    crc,
+                                    localHeaderOffset,
+                                    DataSource.ZipEntry(path, localHeaderOffset, compressedSize, method)
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -488,16 +492,42 @@ public class Zip(
                 is DataSource.Memory -> Buffer().apply { write(ds.bytes) }
                 is DataSource.File -> SystemFileSystem.source(ds.path).buffered()
                 is DataSource.ZipEntry -> {
-                    val s = openSourceAt(ds.zipPath, ds.localHeaderOffset).buffered()
-                    val sig = s.readIntLe().toLong() and 0xFFFFFFFFL
-                    if (sig != LOCAL_FILE_HEADER_SIG) throw ZipException("Invalid Local File Header at ${ds.localHeaderOffset}")
-                    s.skip(22)
-                    val nLen = s.readShortLe().toInt() and 0xFFFF
-                    val eLen = s.readShortLe().toInt() and 0xFFFF
-                    s.skip(nLen.toLong() + eLen.toLong())
-                    val bounded = BoundedSource(s, ds.compressedSize).buffered()
-                    // Decompress if the source entry is deflated
-                    if (ds.method == METHOD_DEFLATED) bounded.inflating(raw = true).buffered() else bounded
+                    val rawS = openSourceAt(ds.zipPath, ds.localHeaderOffset)
+                    try {
+                        val s = rawS.buffered()
+                        val sig = s.readIntLe().toLong() and 0xFFFFFFFFL
+                        if (sig != LOCAL_FILE_HEADER_SIG) throw ZipException("Invalid Local File Header at ${ds.localHeaderOffset}")
+                        s.skip(22)
+                        val nLen = s.readShortLe().toInt() and 0xFFFF
+                        val eLen = s.readShortLe().toInt() and 0xFFFF
+                        s.skip(nLen.toLong() + eLen.toLong())
+                        val bounded = BoundedSource(s, ds.compressedSize)
+
+                        val finalRawSource = if (ds.method == METHOD_DEFLATED) {
+                            bounded.buffered().inflating(raw = true)
+                        } else {
+                            bounded
+                        }
+
+                        return object : RawSource by finalRawSource {
+                            override fun close() {
+                                try {
+                                    finalRawSource.close()
+                                } finally {
+                                    try {
+                                        // bounded doesn't need explicit close if it's finalRawSource
+                                        // but s and rawS definitely do
+                                        s.close()
+                                    } finally {
+                                        rawS.close()
+                                    }
+                                }
+                            }
+                        }.buffered()
+                    } catch (e: Exception) {
+                        rawS.close()
+                        throw e
+                    }
                 }
             }
             return rawSource

@@ -186,10 +186,10 @@ class ZipTest {
                 var foundSubdir = false
                 
                 zip.forEachEntry { entry ->
-                    when (entry.path.toString()) {
-                        "file1.txt" -> foundFile1 = true
-                        "subdir" -> foundSubdir = true
-                        "subdir/file2.txt" -> foundFile2 = true
+                    when (entry.path) {
+                        Path("file1.txt") -> foundFile1 = true
+                        Path("subdir") -> foundSubdir = true
+                        Path("subdir/file2.txt") -> foundFile2 = true
                     }
                 }
                 
