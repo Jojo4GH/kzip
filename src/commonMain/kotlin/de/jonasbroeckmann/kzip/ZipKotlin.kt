@@ -1,5 +1,8 @@
 package de.jonasbroeckmann.kzip
 
+import dev.karmakrafts.kompress.Deflater
+import dev.karmakrafts.kompress.deflating
+import dev.karmakrafts.kompress.inflating
 import kotlinx.io.*
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -7,6 +10,9 @@ import kotlinx.io.files.SystemFileSystem
 internal const val LOCAL_FILE_HEADER_SIG = 0x04034b50L
 internal const val CENTRAL_DIRECTORY_HEADER_SIG = 0x02014b50L
 internal const val EOCD_SIG = 0x06054b50L
+
+internal const val METHOD_STORED = 0
+internal const val METHOD_DEFLATED = 8
 
 internal sealed interface DataSource {
     class Memory(val bytes: ByteArray) : DataSource
@@ -171,11 +177,14 @@ internal class ZipKotlin(
 
     private fun addEntry(name: String, dataSource: DataSource, size: ULong, isDirectory: Boolean) {
         val existing = entries.find { it.pathName == name }
+        // Determine method based on level and type
+        val method = if (isDirectory || level == Zip.CompressionLevel.NoCompression) METHOD_STORED else METHOD_DEFLATED
+
         val newEntry = ZipKotlinEntry(
             this,
             name,
-            0, // STORED
-            size,
+            method,
+            if (method == METHOD_STORED) size else 0uL, // compressed size updated during write
             size,
             0,
             0,
@@ -207,20 +216,21 @@ internal class ZipKotlin(
 
                 for (entry in entries) {
                     val offset = currentOffset
-                    val (crc, size) = writeEntryData(entry, sink)
+                    // writeEntryData now returns CRC, CompressedSize, and UncompressedSize
+                    val (crc, compSize, uncompSize) = writeEntryData(entry, sink)
 
                     val entryWithOffset = entry.copy(
                         localHeaderOffset = offset,
                         crc32 = crc,
-                        compressedSize = size,
-                        uncompressedSize = size
+                        compressedSize = compSize,
+                        uncompressedSize = uncompSize
                     ).apply {
                         this.dataSource = entry.dataSource
                         this.isDir = entry.isDir
                     }
                     cdEntries.add(entryWithOffset)
 
-                    currentOffset += 30 + entry.pathName.length + size.toLong()
+                    currentOffset += 30 + entry.pathName.length + compSize.toLong()
                 }
 
                 val cdOffset = currentOffset
@@ -263,19 +273,18 @@ internal class ZipKotlin(
         }
     }
 
-    private fun writeEntryData(entry: ZipKotlinEntry, sink: Sink): Pair<Long, ULong> {
+    private fun writeEntryData(entry: ZipKotlinEntry, sink: Sink): Triple<Long, ULong, ULong> {
         val dataSource = entry.dataSource!!
-        val crc = Crc32()
-        var size = 0uL
-
         val finalCrc: Long
-        val finalSize: ULong
+        val uncompSize: ULong
 
+        // Pass 1: Calculate CRC and Uncompressed Size
         if (dataSource is DataSource.Memory) {
             finalCrc = Crc32.calculate(dataSource.bytes)
-            finalSize = dataSource.bytes.size.toULong()
+            uncompSize = dataSource.bytes.size.toULong()
         } else {
-            // Pass 1: Calculate CRC and Size
+            val crc = Crc32()
+            var size = 0uL
             val s1 = when (dataSource) {
                 is DataSource.File -> openSourceAt(dataSource.path, 0L).buffered()
                 is DataSource.ZipEntry -> entry.readToSource()
@@ -291,39 +300,71 @@ internal class ZipKotlin(
                 }
             }
             finalCrc = crc.getValue()
-            finalSize = size
+            uncompSize = size
         }
 
-        // Pass 2: Write data
-        val s2 = when (dataSource) {
-            is DataSource.Memory -> Buffer().apply { write(dataSource.bytes) }
-            is DataSource.File -> openSourceAt(dataSource.path, 0L).buffered()
-            is DataSource.ZipEntry -> entry.readToSource()
-        }
-
-        s2.use { s ->
-            sink.writeIntLe(LOCAL_FILE_HEADER_SIG.toInt())
-            sink.writeShortLe(20)
-            sink.writeShortLe(0)
-            sink.writeShortLe(entry.method.toShort())
-            sink.writeShortLe(0)
-            sink.writeShortLe(0)
-            sink.writeIntLe(finalCrc.toInt())
-            sink.writeIntLe(finalSize.toInt())
-            sink.writeIntLe(finalSize.toInt())
-            sink.writeShortLe(entry.pathName.length.toShort())
-            sink.writeShortLe(0)
-            sink.writeString(entry.pathName)
-
-            val buffer = ByteArray(8192)
-            while (true) {
-                val read = s.readAtMostTo(buffer)
-                if (read == -1) break
-                sink.write(buffer, 0, read)
+        if (entry.method == METHOD_STORED) {
+            // Write Stored data
+            val s2 = when (dataSource) {
+                is DataSource.Memory -> Buffer().apply { write(dataSource.bytes) }
+                is DataSource.File -> openSourceAt(dataSource.path, 0L).buffered()
+                is DataSource.ZipEntry -> entry.readToSource()
+            }
+            s2.use { s ->
+                writeLocalHeader(sink, entry.pathName, METHOD_STORED, finalCrc, uncompSize, uncompSize)
+                s.transferTo(sink)
+            }
+            return Triple(finalCrc, uncompSize, uncompSize)
+        } else {
+            // Write Deflated data
+            if (dataSource is DataSource.Memory) {
+                // Bulk optimization for memory sources
+                val deflated = Deflater.deflate(dataSource.bytes, raw = true, level = level.zlibLevel)
+                val compSize = deflated.size.toULong()
+                writeLocalHeader(sink, entry.pathName, METHOD_DEFLATED, finalCrc, compSize, uncompSize)
+                sink.write(deflated)
+                return Triple(finalCrc, compSize, uncompSize)
+            } else {
+                // Stream to temp file to determine compressed size
+                val tempDeflatePath = Path(path.toString() + ".deflate.tmp")
+                try {
+                    val s2 = when (dataSource) {
+                        is DataSource.File -> openSourceAt(dataSource.path, 0L).buffered()
+                        is DataSource.ZipEntry -> entry.readToSource()
+                        is DataSource.Memory -> throw IllegalStateException()
+                    }
+                    s2.use { s ->
+                        SystemFileSystem.sink(tempDeflatePath).buffered().use { tempSink ->
+                            val deflated = s.deflating(level = level.zlibLevel, raw = true).buffered()
+                            deflated.use {
+                                it.transferTo(tempSink)
+                            }
+                        }
+                    }
+                    val compSize = SystemFileSystem.metadataOrNull(tempDeflatePath)?.size?.toULong() ?: 0uL
+                    writeLocalHeader(sink, entry.pathName, METHOD_DEFLATED, finalCrc, compSize, uncompSize)
+                    SystemFileSystem.source(tempDeflatePath).buffered().use { it.transferTo(sink) }
+                    return Triple(finalCrc, compSize, uncompSize)
+                } finally {
+                    if (SystemFileSystem.exists(tempDeflatePath)) SystemFileSystem.delete(tempDeflatePath)
+                }
             }
         }
+    }
 
-        return Pair(finalCrc, finalSize)
+    private fun writeLocalHeader(sink: Sink, name: String, method: Int, crc: Long, compSize: ULong, uncompSize: ULong) {
+        sink.writeIntLe(LOCAL_FILE_HEADER_SIG.toInt())
+        sink.writeShortLe(20) // Version needed (2.0 for Deflate)
+        sink.writeShortLe(0)  // Flags
+        sink.writeShortLe(method.toShort())
+        sink.writeShortLe(0)  // Mod time
+        sink.writeShortLe(0)  // Mod date
+        sink.writeIntLe(crc.toInt())
+        sink.writeIntLe(compSize.toInt())
+        sink.writeIntLe(uncompSize.toInt())
+        sink.writeShortLe(name.length.toShort())
+        sink.writeShortLe(0)  // Extra len
+        sink.writeString(name)
     }
 
     internal data class ZipKotlinEntry(
@@ -341,7 +382,7 @@ internal class ZipKotlin(
         override val isDirectory: Boolean get() = isDir
 
         override fun readToSource(): Source {
-            return when (val ds = dataSource!!) {
+            val rawSource = when (val ds = dataSource!!) {
                 is DataSource.Memory -> Buffer().apply { write(ds.bytes) }
                 is DataSource.File -> SystemFileSystem.source(ds.path).buffered()
                 is DataSource.ZipEntry -> {
@@ -352,9 +393,12 @@ internal class ZipKotlin(
                     val nLen = s.readShortLe().toInt() and 0xFFFF
                     val eLen = s.readShortLe().toInt() and 0xFFFF
                     s.skip(nLen.toLong() + eLen.toLong())
-                    BoundedSource(s, ds.compressedSize).buffered()
+                    val bounded = BoundedSource(s, ds.compressedSize).buffered()
+                    // Decompress if the source entry is deflated
+                    if (ds.method == METHOD_DEFLATED) bounded.inflating(raw = true).buffered() else bounded
                 }
             }
+            return rawSource
         }
 
         override fun readToBytes(): ByteArray = readToSource().use { it.readByteArray() }

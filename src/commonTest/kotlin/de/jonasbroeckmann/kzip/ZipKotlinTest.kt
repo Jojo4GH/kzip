@@ -109,4 +109,41 @@ class ZipKotlinTest {
             }
         }
     }
+
+    @Test
+    fun testCompressionEfficiency() {
+        val compressibleData = "A".repeat(10000).encodeToByteArray()
+        val storedZip = Path("stored.zip")
+        val deflatedZip = Path("deflated.zip")
+
+        try {
+            // Create Stored ZIP
+            Zip.openKotlin(storedZip, Zip.Mode.Write, Zip.CompressionLevel.NoCompression).use { zip ->
+                zip.entryFromSource(Path("data.txt"), Buffer().apply { write(compressibleData) })
+            }
+
+            // Create Deflated ZIP
+            Zip.openKotlin(deflatedZip, Zip.Mode.Write, Zip.CompressionLevel.Default).use { zip ->
+                zip.entryFromSource(Path("data.txt"), Buffer().apply { write(compressibleData) })
+            }
+
+            val storedSize = SystemFileSystem.metadataOrNull(storedZip)?.size ?: 0L
+            val deflatedSize = SystemFileSystem.metadataOrNull(deflatedZip)?.size ?: 0L
+
+            assertTrue(
+                deflatedSize < storedSize,
+                "Deflated ZIP ($deflatedSize) should be smaller than Stored ZIP ($storedSize)"
+            )
+
+            // Verify content
+            Zip.openKotlin(deflatedZip, Zip.Mode.Read).use { zip ->
+                zip.entry(Path("data.txt")) {
+                    assertContentEquals(compressibleData, readToBytes())
+                }
+            }
+        } finally {
+            if (SystemFileSystem.exists(storedZip)) SystemFileSystem.delete(storedZip)
+            if (SystemFileSystem.exists(deflatedZip)) SystemFileSystem.delete(deflatedZip)
+        }
+    }
 }

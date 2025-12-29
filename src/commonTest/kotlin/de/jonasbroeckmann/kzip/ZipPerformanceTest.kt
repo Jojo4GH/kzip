@@ -42,7 +42,9 @@ class ZipPerformanceTest {
         if (metadata.isDirectory) {
             SystemFileSystem.list(path).forEach { deleteRecursively(it) }
         }
-        SystemFileSystem.delete(path)
+        if (SystemFileSystem.exists(path)) {
+            SystemFileSystem.delete(path)
+        }
     }
 
     private fun generateTestData(numFiles: Int, maxDepth: Int, fileSize: Int) {
