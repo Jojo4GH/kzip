@@ -10,6 +10,11 @@
 [![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native]
 [![Android X64 Platform][android-x64-platform-badge]][kotlin-native]
 [![Android ARM64 Platform][android-arm64-platform-badge]][kotlin-native]
+[![macOS X64 Platform][macos-x64-platform-badge]][kotlin-native]
+[![macOS ARM64 Platform][macos-arm64-platform-badge]][kotlin-native]
+[![iOS ARM64 Platform][ios-arm64-platform-badge]][kotlin-native]
+[![iOS X64 Platform][ios-x64-platform-badge]][kotlin-native]
+[![iOS Simulator ARM64 Platform][ios-simulator-arm64-platform-badge]][kotlin-native]
 
 [kzip-maven-badge]: https://img.shields.io/maven-central/v/de.jonasbroeckmann.kzip/kzip?label=Latest
 [kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip?cacheSeconds=3600
@@ -20,6 +25,11 @@
 [mingw-x64-platform-badge]: https://img.shields.io/badge/Native-MinGW_X64-e082f3
 [android-x64-platform-badge]: https://img.shields.io/badge/Native-Android_X64-e082f3
 [android-arm64-platform-badge]: https://img.shields.io/badge/Native-Android_ARM64-e082f3
+[macos-x64-platform-badge]: https://img.shields.io/badge/Native-macOS_X64-e082f3
+[macos-arm64-platform-badge]: https://img.shields.io/badge/Native-macOS_ARM64-e082f3
+[ios-arm64-platform-badge]: https://img.shields.io/badge/Native-iOS_ARM64-e082f3
+[ios-x64-platform-badge]: https://img.shields.io/badge/Native-iOS_X64-e082f3
+[ios-simulator-arm64-platform-badge]: https://img.shields.io/badge/Native-iOS_Simulator_ARM64-e082f3
 
 [kzip-maven]: https://central.sonatype.com/artifact/de.jonasbroeckmann.kzip/kzip
 [kotlin-multiplatform]: https://kotlinlang.org/docs/multiplatform.html
@@ -47,12 +57,11 @@ Currently kzip supports the following targets:
 - `androidNativeArm64`
 - `macosX64`
 - `macosArm64`
+- `iosArm64`
+- `iosX64`
+- `iosSimulatorArm64`
 
-But the following targets are planned (mostly only requiring testing):
-
-- Other Apple targets
-
-More features are planned including support for suspending functions, more access to metadata, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
+But more features are planned including support for suspending functions, more access to metadata, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
 
 ## 🛠️ Installation
 
