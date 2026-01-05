@@ -27,15 +27,15 @@ class ZipTest {
     @Test
     fun testWriteAndRead() {
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
-            zip.entryFromSource(Path("test/test-1.txt"), Buffer().apply { write(testData1) })
+            zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
         }
 
         assertTrue(SystemFileSystem.exists(testZipPath))
 
         Zip.open(testZipPath, Zip.Mode.Read).use { zip ->
             assertEquals(1, zip.numberOfEntries)
-            zip.entry(Path("test/test-1.txt")) {
-                assertEquals(Path("test/test-1.txt"), path)
+            zip.entry(Path("test", "test-1.txt")) {
+                assertEquals(Path("test", "test-1.txt"), path)
                 assertFalse(isDirectory)
                 assertEquals(testData1.size.toULong(), uncompressedSize)
                 assertEquals(2220805626L, crc32)
@@ -47,19 +47,19 @@ class ZipTest {
     @Test
     fun testAppend() {
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
-            zip.entryFromSource(Path("test/test-1.txt"), Buffer().apply { write(testData1) })
+            zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
         }
 
         Zip.open(testZipPath, Zip.Mode.Append).use { zip ->
-            zip.entryFromSource(Path("test/test-2.txt"), Buffer().apply { write(testData2) })
+            zip.entryFromSource(Path("test", "test-2.txt"), Buffer().apply { write(testData2) })
         }
 
         Zip.open(testZipPath, Zip.Mode.Read).use { zip ->
             assertEquals(2, zip.numberOfEntries)
-            zip.entry(Path("test/test-1.txt")) {
+            zip.entry(Path("test", "test-1.txt")) {
                 assertContentEquals(testData1, readToBytes())
             }
-            zip.entry(Path("test/test-2.txt")) {
+            zip.entry(Path("test", "test-2.txt")) {
                 assertContentEquals(testData2, readToBytes())
                 assertEquals(2532008468L, crc32)
             }
@@ -69,31 +69,31 @@ class ZipTest {
     @Test
     fun testEntryByIndex() {
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
-            zip.entryFromSource(Path("test/test-1.txt"), Buffer().apply { write(testData1) })
-            zip.entryFromSource(Path("test/test-2.txt"), Buffer().apply { write(testData2) })
+            zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
+            zip.entryFromSource(Path("test", "test-2.txt"), Buffer().apply { write(testData2) })
         }
 
         Zip.open(testZipPath, Zip.Mode.Read).use { zip ->
             assertEquals(2, zip.numberOfEntries)
             zip.entry(0) {
-                assertEquals(Path("test/test-1.txt"), path)
+                assertEquals(Path("test", "test-1.txt"), path)
             }
             zip.entry(1) {
-                assertEquals(Path("test/test-2.txt"), path)
+                assertEquals(Path("test", "test-2.txt"), path)
             }
         }
     }
 
     @Test
     fun testWriteUtf8() {
-        val utf8Name = "тест/Если-б-не-было-войны.txt"
+        val utf8Path = Path("тест", "Если-б-не-было-войны.txt")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
-            zip.entryFromSource(Path(utf8Name), Buffer().apply { write(testData1) })
+            zip.entryFromSource(utf8Path, Buffer().apply { write(testData1) })
         }
 
         Zip.open(testZipPath, Zip.Mode.Read).use { zip ->
-            zip.entry(Path(utf8Name)) {
-                assertEquals(Path(utf8Name), path)
+            zip.entry(utf8Path) {
+                assertEquals(utf8Path, path)
                 assertContentEquals(testData1, readToBytes())
             }
         }
@@ -140,7 +140,7 @@ class ZipTest {
     @Test
     fun testExtractTo() {
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
-            zip.entryFromSource(Path("test/test-1.txt"), Buffer().apply { write(testData1) })
+            zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
             zip.folderEntry(Path("empty-folder"))
         }
 
@@ -150,14 +150,14 @@ class ZipTest {
                 zip.extractTo(extractDir)
             }
 
-            assertTrue(SystemFileSystem.metadataOrNull(Path(extractDir, "test/test-1.txt"))?.isRegularFile == true)
-            assertTrue(SystemFileSystem.metadataOrNull(Path(extractDir, "empty-folder"))?.isDirectory == true)
+            assertEquals(true, SystemFileSystem.metadataOrNull(Path(extractDir, "test", "test-1.txt"))?.isRegularFile)
+            assertEquals(true, SystemFileSystem.metadataOrNull(Path(extractDir, "empty-folder"))?.isDirectory)
             
-            SystemFileSystem.source(Path(extractDir, "test/test-1.txt")).buffered().use {
+            SystemFileSystem.source(Path(extractDir, "test", "test-1.txt")).buffered().use {
                 assertContentEquals(testData1, it.readByteArray())
             }
         } finally {
-            if (SystemFileSystem.exists(Path(extractDir, "test/test-1.txt"))) SystemFileSystem.delete(Path(extractDir, "test/test-1.txt"))
+            if (SystemFileSystem.exists(Path(extractDir, "test", "test-1.txt"))) SystemFileSystem.delete(Path(extractDir, "test", "test-1.txt"))
             if (SystemFileSystem.exists(Path(extractDir, "test"))) SystemFileSystem.delete(Path(extractDir, "test"))
             if (SystemFileSystem.exists(Path(extractDir, "empty-folder"))) SystemFileSystem.delete(Path(extractDir, "empty-folder"))
             if (SystemFileSystem.exists(extractDir)) SystemFileSystem.delete(extractDir)
@@ -181,21 +181,9 @@ class ZipTest {
             }
 
             Zip.open(testZipPath, Zip.Mode.Read).use { zip ->
-                var foundFile1 = false
-                var foundFile2 = false
-                var foundSubdir = false
-                
-                zip.forEachEntry { entry ->
-                    when (entry.path.toString()) {
-                        "file1.txt" -> foundFile1 = true
-                        "subdir" -> foundSubdir = true
-                        "subdir/file2.txt" -> foundFile2 = true
-                    }
-                }
-                
-                assertTrue(foundFile1, "file1.txt not found")
-                assertTrue(foundSubdir, "subdir not found")
-                assertTrue(foundFile2, "subdir/file2.txt not found")
+                assertContainsEntry(zip, Path("file1.txt"))
+                assertContainsEntry(zip, Path("subdir"))
+                assertContainsEntry(zip, Path("subdir", "file2.txt"))
             }
         } finally {
             if (SystemFileSystem.exists(file2)) SystemFileSystem.delete(file2)
@@ -226,15 +214,9 @@ class ZipTest {
 
         Zip.open(testZipPath, Zip.Mode.Read).use { zip ->
             assertEquals(2, zip.numberOfEntries)
-            var foundFile1 = false
-            var foundFile3 = false
-            zip.forEachEntry { entry ->
-                if (entry.path == Path("file1.txt")) foundFile1 = true
-                if (entry.path == Path("file3.txt")) foundFile3 = true
-                assertNotEquals(Path("file2.txt"), entry.path)
-            }
-            assertTrue(foundFile1)
-            assertTrue(foundFile3)
+            assertContainsEntry(zip, Path("file1.txt"))
+            assertContainsEntry(zip, Path("file3.txt"))
+            assertFalse(zip.containsEntry(Path("file2.txt")))
         }
     }
 
@@ -256,4 +238,19 @@ class ZipTest {
             }
         }
     }
+}
+
+private fun assertContainsEntry(zip: Zip, path: Path) {
+    assertTrue(zip.containsEntry(path), "$path not found")
+}
+
+private fun Zip.containsEntry(path: Path): Boolean {
+    for (i in 0 until numberOfEntries) {
+        var found = false
+        entry(i) {
+            found = this.path == path
+        }
+        if (found) return true
+    }
+    return false
 }
