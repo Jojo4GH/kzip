@@ -44,6 +44,10 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.4")
+            implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
