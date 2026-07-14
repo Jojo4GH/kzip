@@ -19,24 +19,75 @@ kotlin {
 
     jvm()
 
-    mingwX64()
+    val kubaZipTargets = listOf(
+        mingwX64(),
+        linuxX64(),
+        linuxArm64(),
+        androidNativeX64(),
+        androidNativeArm64(),
+    )
 
-    linuxX64()
-    linuxArm64()
+    js {
+        browser()
+        nodejs()
+    }
 
-    androidNativeX64()
-    androidNativeArm64()
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
+
+    // waiting for dev.karmakrafts.kompress
+    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    // wasmWasi {
+    //     nodejs()
+    // }
 
     macosX64()
     macosArm64()
 
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
+    tvosX64()
+    tvosArm64()
+    tvosSimulatorArm64()
+
+    watchosX64()
+    watchosArm32()
+    watchosArm64()
+    watchosSimulatorArm64()
+    // watchosDeviceArm64() // waiting for dev.karmakrafts.kompress
+
     // Configure cinterop for kuba zip library
-    targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget> {
-        compilations.getByName("main") {
+    kubaZipTargets.forEach {
+        it.compilations.getByName("main") {
             cinterops {
                 cinterops.create("zip") {
                     includeDirs("src/nativeInterop/cinterop")
                 }
+            }
+        }
+    }
+
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+    applyDefaultHierarchyTemplate {
+        common {
+            group("native") {
+                withMingw()
+                withLinux()
+                withAndroidNative()
+            }
+            group("webAndApple") {
+                group("web") {
+                    withJs()
+                    withWasmJs()
+                }
+                withWasmWasi()
+                withApple()
+                withJvm()
             }
         }
     }
@@ -50,6 +101,9 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
+        }
+        getByName("webAndAppleMain").dependencies {
+            implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
         }
     }
 }

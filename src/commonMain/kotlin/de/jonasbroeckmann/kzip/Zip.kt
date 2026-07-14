@@ -2,6 +2,7 @@ package de.jonasbroeckmann.kzip
 
 import kotlinx.io.*
 import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 
 /**
  * A ZIP file.
@@ -117,14 +118,20 @@ public interface Zip : AutoCloseable {
          *
          * @return the byte array to read the entry from
          */
-        public fun readToBytes(): ByteArray
+        public fun readToBytes(): ByteArray = readToSource().use { it.readByteArray() }
 
         /**
          * Reads the entry to a file.
          *
          * @param path the path to read the entry to
          */
-        public fun readToPath(path: Path)
+        public fun readToPath(path: Path) {
+            readToSource().use { source ->
+                SystemFileSystem.sink(path).buffered().use { sink ->
+                    source.transferTo(sink)
+                }
+            }
+        }
     }
 
     /**

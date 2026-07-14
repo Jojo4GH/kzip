@@ -2,7 +2,6 @@ package de.jonasbroeckmann.kzip
 
 import kotlinx.io.*
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.CompressionLevel as Zip4jCompressionLevel
@@ -103,23 +102,15 @@ private class JavaZip(
         override val crc32: Long get() = header.crc
 
         override fun readToSource(): Source = zipFile.getInputStream(header).asSource().buffered()
-        override fun readToBytes(): ByteArray = readToSource().use { it.readByteArray() }
-        override fun readToPath(path: Path) {
-            readToSource().use { source ->
-                SystemFileSystem.sink(path).buffered().use { sink ->
-                    source.transferTo(sink)
-                }
-            }
-        }
     }
 }
 
-public actual fun Zip.Companion.open(
-    path: Path,
-    mode: Zip.Mode,
-    level: Zip.CompressionLevel
-): Zip = JavaZip(
-    zipPath = path,
-    mode = mode,
-    level = level
-)
+//public actual fun Zip.Companion.open(
+//    path: Path,
+//    mode: Zip.Mode,
+//    level: Zip.CompressionLevel
+//): Zip = JavaZip(
+//    zipPath = path,
+//    mode = mode,
+//    level = level
+//)

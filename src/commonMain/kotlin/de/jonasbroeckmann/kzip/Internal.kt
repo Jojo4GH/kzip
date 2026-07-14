@@ -3,7 +3,7 @@ package de.jonasbroeckmann.kzip
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-private const val ZipEntryNameSeparator = '/'
+internal const val ZipEntryNameSeparator = '/'
 
 internal fun Zip.Companion.pathToEntryName(path: Path): String {
     if (path.isAbsolute) throw IllegalArgumentException("Path for zip entry must be relative: $path")
