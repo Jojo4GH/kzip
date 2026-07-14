@@ -1,5 +1,6 @@
 package de.jonasbroeckmann.kzip
 
+import de.jonasbroeckmann.kzip.implementation.util.Crc32
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -44,7 +45,7 @@ class Crc32Test {
     @Test
     fun testOffsetAndLength() {
         val data = "ABC123456789XYZ".encodeToByteArray()
-        val crc = Crc32()
+
         // Extract "123456789" from the middle
         assertEquals(0xCBF43926u, Crc32.compute {
             write(data, 3, 12)

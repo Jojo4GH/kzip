@@ -19,13 +19,15 @@ kotlin {
 
     jvm()
 
-    val kubaZipTargets = listOf(
-        mingwX64(),
-        linuxX64(),
-        linuxArm64(),
-        androidNativeX64(),
-        androidNativeArm64(),
-    )
+    mingwX64()
+
+    linuxX64()
+    linuxArm64()
+
+    androidNativeX64()
+    androidNativeX86()
+    androidNativeArm64()
+    androidNativeArm32()
 
     js {
         browser()
@@ -61,49 +63,16 @@ kotlin {
     watchosSimulatorArm64()
     // watchosDeviceArm64() // waiting for dev.karmakrafts.kompress
 
-    // Configure cinterop for kuba zip library
-    kubaZipTargets.forEach {
-        it.compilations.getByName("main") {
-            cinterops {
-                cinterops.create("zip") {
-                    includeDirs("src/nativeInterop/cinterop")
-                }
-            }
-        }
-    }
-
-    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
-    applyDefaultHierarchyTemplate {
-        common {
-            group("native") {
-                withMingw()
-                withLinux()
-                withAndroidNative()
-            }
-            group("webAndApple") {
-                group("web") {
-                    withJs()
-                    withWasmJs()
-                }
-                withWasmWasi()
-                withApple()
-                withJvm()
-            }
-        }
-    }
-
     sourceSets {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.4")
+            implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
         jvmMain.dependencies {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
-        }
-        getByName("webAndAppleMain").dependencies {
-            implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
         }
     }
 }

@@ -1,4 +1,4 @@
-package de.jonasbroeckmann.kzip
+package de.jonasbroeckmann.kzip.implementation.util
 
 import kotlinx.io.Buffer
 import kotlinx.io.RawSink
@@ -10,7 +10,7 @@ import kotlinx.io.readUByte
 /**
  * Sink calculating CRC-32 code for all the data written to it and sending this data to the [sink] afterward.
  *
- * See sample in [kotlinx.io.RawSink]
+ * See sample in [RawSink]
  */
 @OptIn(ExperimentalUnsignedTypes::class)
 internal class Crc32(private val sink: RawSink = discardingSink()): RawSink {

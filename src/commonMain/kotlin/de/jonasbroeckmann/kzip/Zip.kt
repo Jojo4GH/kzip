@@ -1,5 +1,6 @@
 package de.jonasbroeckmann.kzip
 
+import de.jonasbroeckmann.kzip.implementation.ZipImpl
 import kotlinx.io.*
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -7,7 +8,7 @@ import kotlinx.io.files.SystemFileSystem
 /**
  * A ZIP file.
  *
- * Use the [open] function to open a ZIP file.
+ * Use the [de.jonasbroeckmann.kzip.implementation.open] function to open a ZIP file.
  */
 public interface Zip : AutoCloseable {
     /**
@@ -192,8 +193,12 @@ public interface Zip : AutoCloseable {
  * @param mode the mode to open the ZIP file in. Defaults to [Zip.Mode.Read]
  * @param level the compression level to use when writing to the ZIP file. Defaults to [Zip.CompressionLevel.Default]
  */
-public expect fun Zip.Companion.open(
+public fun Zip.Companion.open(
     path: Path,
     mode: Zip.Mode = Zip.Mode.Read,
     level: Zip.CompressionLevel = Zip.CompressionLevel.Default
-): Zip
+): Zip = ZipImpl(
+    path = path,
+    mode = mode,
+    level = level
+)
