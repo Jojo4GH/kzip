@@ -3,13 +3,11 @@ package de.jonasbroeckmann.kzip
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
-
-
-private var nextTempId = 1
+import kotlin.uuid.Uuid
 
 internal fun createTempDirectory(label: String? = null, overwrite: Boolean = true): Path {
     val base = SystemFileSystem.resolve(Path("."))
-    val path = Path(base, listOf("tmp", "${nextTempId++}", label).joinToString("-"))
+    val path = Path(base, listOf("tmp", label, "${Uuid.random()}").joinToString("-"))
     if (overwrite) SystemFileSystem.deleteRecursively(path, mustExist = false)
     SystemFileSystem.createDirectories(path, mustCreate = false)
     return path
