@@ -8,6 +8,8 @@ build/
 secret.properties
 secret_key.gpg
 
+/tmp-*/
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml

@@ -1,7 +1,6 @@
 package de.jonasbroeckmann.kzip
 
 import kotlinx.io.*
-import kotlinx.io.files.FileSystem
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlin.test.*
@@ -9,7 +8,7 @@ import kotlin.test.*
 class ZipTest {
 
     @Test
-    fun testWriteAndRead() = withTestDir { testDir ->
+    fun testWriteAndRead() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write, level = Zip.CompressionLevel.NoCompression).use { zip ->
             zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
@@ -30,7 +29,7 @@ class ZipTest {
     }
 
     @Test
-    fun testAppend() = withTestDir { testDir ->
+    fun testAppend() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
             zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
@@ -53,7 +52,7 @@ class ZipTest {
     }
 
     @Test
-    fun testEntryByIndex() = withTestDir { testDir ->
+    fun testEntryByIndex() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
             zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
@@ -72,7 +71,7 @@ class ZipTest {
     }
 
     @Test
-    fun testWriteUtf8() = withTestDir { testDir ->
+    fun testWriteUtf8() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         val utf8Path = Path("тест", "Если-б-не-было-войны.txt")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
@@ -88,7 +87,7 @@ class ZipTest {
     }
 
     @Test
-    fun testEntryFromPath() = withTestDir { testDir ->
+    fun testEntryFromPath() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         val testFile = Path(testDir, "test-file.txt")
         SystemFileSystem.sink(testFile).buffered().use { it.write(testData2) }
@@ -105,7 +104,7 @@ class ZipTest {
     }
 
     @Test
-    fun testFolderEntry() = withTestDir { testDir ->
+    fun testFolderEntry() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
             zip.folderEntry(Path("empty-folder"))
@@ -122,7 +121,7 @@ class ZipTest {
     }
 
     @Test
-    fun testExtractTo() = withTestDir { testDir ->
+    fun testExtractTo() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
             zip.entryFromSource(Path("test", "test-1.txt"), Buffer().apply { write(testData1) })
@@ -143,7 +142,7 @@ class ZipTest {
     }
 
     @Test
-    fun testCompressFrom() = withTestDir { testDir ->
+    fun testCompressFrom() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         val sourceDir = Path(testDir, "source")
         val file1 = Path(sourceDir, "file1.txt")
@@ -166,14 +165,14 @@ class ZipTest {
     }
 
     @Test
-    fun testOpenNonExistentRead() = withTestDir { testDir ->
+    fun testOpenNonExistentRead() = withTempDirectory { testDir ->
         assertFails {
             Zip.open(Path(testDir, "non-existent.zip"), Zip.Mode.Read)
         }
     }
 
     @Test
-    fun testDeleteEntries() = withTestDir { testDir ->
+    fun testDeleteEntries() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
             zip.entryFromSource(Path("file1.txt"), Buffer().apply { write(testData1) })
@@ -194,7 +193,7 @@ class ZipTest {
     }
 
     @Test
-    fun testDeleteEntriesByIndex() = withTestDir { testDir ->
+    fun testDeleteEntriesByIndex() = withTempDirectory { testDir ->
         val testZipPath = Path(testDir, "test.zip")
         Zip.open(testZipPath, Zip.Mode.Write).use { zip ->
             zip.entryFromSource(Path("file1.txt"), Buffer().apply { write(testData1) })
@@ -216,37 +215,6 @@ class ZipTest {
     private companion object {
         private val testData1 = "Some test data 1...".encodeToByteArray()
         private val testData2 = "Some test data 2...".encodeToByteArray()
-
-        private var nextTestZipId = 0
-
-        private inline fun withTestDir(name: String = "tmp-test-${nextTestZipId++}", block: (Path) -> Unit) {
-            val base = SystemFileSystem.resolve(Path("."))
-            val path = Path(base, name)
-            SystemFileSystem.deleteRecursively(path, mustExist = false)
-            SystemFileSystem.createDirectories(path)
-            try {
-                block(path)
-            } finally {
-                try {
-                    SystemFileSystem.deleteRecursively(path, mustExist = false)
-                } catch (e: Exception) {
-                    throw RuntimeException("Failed to delete test directory: $path", e)
-                }
-            }
-        }
-
-        private fun FileSystem.deleteRecursively(path: Path, mustExist: Boolean = true) {
-            metadataOrNull(path)?.let { metadata ->
-                if (metadata.isDirectory) {
-                    list(path).forEach { deleteRecursively(it, mustExist = mustExist) }
-                }
-            }
-            try {
-                delete(path, mustExist = mustExist)
-            } catch (e: Exception) {
-                throw RuntimeException("Failed to delete: $path", e)
-            }
-        }
     }
 }
 
