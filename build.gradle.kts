@@ -1,7 +1,9 @@
 plugins {
     kotlin("multiplatform") version "2.4.0"
+    id("org.jetbrains.kotlinx.benchmark") version "0.4.17"
     id("org.jetbrains.dokka") version "2.1.0"
     id("com.vanniktech.maven.publish") version "0.35.0"
+    id("io.github.terrakok.kmp-hierarchy") version "1.1"
 }
 
 group = "de.jonasbroeckmann.kzip"
@@ -60,29 +62,48 @@ kotlin {
     // watchosDeviceArm64() // waiting for dev.karmakrafts.kompress
 
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
-    applyHierarchyTemplate {
+    applyDefaultHierarchyTemplate {
         common {
+            // Source sets with Okio implementations
             group("okio") {
                 withJvm()
-                group("native") {
-                    group("mingw") { withMingw() }
-                    group("linux") { withLinux() }
-                    group("apple") {
-                        withApple()
-                        group("ios") { withIos() }
-                        group("tvos") { withTvos() }
-                        group("watchos") { withWatchos() }
-                        group("macos") { withMacos() }
-                    }
-                }
+                group("mingw")
+                group("linux")
+                group("apple")
                 withWasmWasi()
             }
+            // Source sets without Okio implementations
             group("nonOkio") {
                 group("web") {
                     withJs()
                     withWasmJs()
                 }
                 group("androidNative") { withAndroidNative() }
+            }
+            // Source sets for benchmarks
+            group("benchmark") {
+                withJvm()
+                group("kubaZip") {
+                    withMingwX64()
+                    withLinuxX64()
+                }
+            }
+        }
+    }
+
+    listOf(
+        mingwX64(),
+        linuxX64(),
+    ).forEach { target ->
+        target.compilations.configureEach {
+            if (name == "test" || name.endsWith("TestBenchmark")) {
+                cinterops {
+                    create("zip") {
+                        val path = "src/kubaZipTest/cinterop"
+                        definitionFile.set(project.file("$path/zip.def"))
+                        includeDirs(path)
+                    }
+                }
             }
         }
     }
@@ -100,10 +121,19 @@ kotlin {
 
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation("org.jetbrains.kotlinx:kotlinx-benchmark-runtime:0.4.17")
         }
         jvmTest.dependencies {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
         }
+    }
+}
+
+benchmark {
+    targets {
+        register("jvmTest")
+        register("mingwX64Test")
+        register("linuxX64Test")
     }
 }
 
