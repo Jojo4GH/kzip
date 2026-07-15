@@ -7,11 +7,11 @@ import kotlinx.io.files.SystemFileSystem
 
 private var nextTempId = 1
 
-internal fun createTempDirectory(label: String? = null): Path {
+internal fun createTempDirectory(label: String? = null, overwrite: Boolean = true): Path {
     val base = SystemFileSystem.resolve(Path("."))
     val path = Path(base, listOf("tmp", "${nextTempId++}", label).joinToString("-"))
-//    SystemFileSystem.deleteRecursively(path, mustExist = false)
-    SystemFileSystem.createDirectories(path)
+    if (overwrite) SystemFileSystem.deleteRecursively(path, mustExist = false)
+    SystemFileSystem.createDirectories(path, mustCreate = false)
     return path
 }
 

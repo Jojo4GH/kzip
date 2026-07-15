@@ -1,6 +1,7 @@
 package de.jonasbroeckmann.kzip.implementation.model
 
 import de.jonasbroeckmann.kzip.ZipException
+import de.jonasbroeckmann.kzip.implementation.util.fileSourceWithOffset
 import kotlinx.io.Sink
 import kotlinx.io.Source
 import kotlinx.io.buffered
@@ -215,26 +216,36 @@ internal data class CentralDirectory(
     companion object {
         fun read(path: Path): CentralDirectory {
             val size = SystemFileSystem.metadataOrNull(path)?.size ?: throw ZipException("File not found: $path")
-            val offset = SystemFileSystem.source(path).buffered().use { source ->
-                var skipped = 0L
-                if (size >= 22) {
-                    skipped = size - minOf(size, 22L + 0xFFFFL)
-                    source.skip(skipped)
-                }
+            val minSkippableBytes = (size - (22L + 0xFFFFL)).coerceAtLeast(0L) // the end record has a maximum size
+
+            // Search for end record
+            val endRecordOffset = fileSourceWithOffset(
+                path = path,
+                startOffset = minSkippableBytes
+            ).buffered().use { source ->
                 val index = source.readByteString().lastIndexOf(ByteString(0x50u, 0x4Bu, 0x05u, 0x06u))
                 if (index < 0) throw ZipException("Not a ZIP file (EOCD record not found)")
-                skipped + index
+                minSkippableBytes + index
             }
-            val endRecord = SystemFileSystem.source(path).buffered().use { source ->
-                source.skip(offset)
+
+            // Read end record
+            val endRecord = fileSourceWithOffset(
+                path = path,
+                startOffset = endRecordOffset
+            ).buffered().use { source ->
                 EndRecord.read(source)
             }
-            val fileHeaders = SystemFileSystem.source(path).buffered().use { source ->
-                source.skip(endRecord.centralDirectoryOffset.toLong())
+
+            // Read file headers
+            val fileHeaders = fileSourceWithOffset(
+                path = path,
+                startOffset = endRecord.centralDirectoryOffset.toLong()
+            ).buffered().use { source ->
                 (0..<endRecord.totalNumberOfEntries.toInt()).map {
                     FileHeader.read(source)
                 }
             }
+
             return CentralDirectory(
                 fileHeaders = fileHeaders,
                 endRecord = endRecord

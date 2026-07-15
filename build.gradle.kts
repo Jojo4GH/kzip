@@ -25,18 +25,14 @@ kotlin {
     linuxArm64()
 
     androidNativeX64()
-    androidNativeX86()
     androidNativeArm64()
-    androidNativeArm32()
 
     js {
-        browser()
         nodejs()
     }
 
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs {
-        browser()
         nodejs()
     }
 
@@ -63,15 +59,49 @@ kotlin {
     watchosSimulatorArm64()
     // watchosDeviceArm64() // waiting for dev.karmakrafts.kompress
 
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+    applyHierarchyTemplate {
+        common {
+            group("okio") {
+                withJvm()
+                group("native") {
+                    group("mingw") { withMingw() }
+                    group("linux") { withLinux() }
+                    group("apple") {
+                        withApple()
+                        group("ios") { withIos() }
+                        group("tvos") { withTvos() }
+                        group("watchos") { withWatchos() }
+                        group("macos") { withMacos() }
+                    }
+                }
+                withWasmWasi()
+            }
+            group("nonOkio") {
+                group("web") {
+                    withJs()
+                    withWasmJs()
+                }
+                group("androidNative") { withAndroidNative() }
+            }
+        }
+    }
+
     sourceSets {
+        val kotlinxIOVersion = "0.9.1"
         commonMain.dependencies {
-            implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.5.4")
+            implementation("org.jetbrains.kotlinx:kotlinx-io-core:$kotlinxIOVersion")
             implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
         }
+        getByName("okioMain").dependencies {
+            implementation("com.squareup.okio:okio:3.16.2")
+            implementation ("org.jetbrains.kotlinx:kotlinx-io-okio:${kotlinxIOVersion}")
+        }
+
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
-        jvmMain.dependencies {
+        jvmTest.dependencies {
             implementation("net.lingala.zip4j:zip4j:2.11.5")
         }
     }

@@ -4,10 +4,10 @@ import de.jonasbroeckmann.kzip.ZipException
 import de.jonasbroeckmann.kzip.implementation.model.CentralDirectory
 import de.jonasbroeckmann.kzip.implementation.model.CompressionMethod
 import de.jonasbroeckmann.kzip.implementation.model.LocalFileHeader
+import de.jonasbroeckmann.kzip.implementation.util.fileSourceWithOffset
 import de.jonasbroeckmann.kzip.implementation.util.limited
 import de.jonasbroeckmann.kzip.implementation.util.wrappedInflating
 import kotlinx.io.buffered
-import kotlinx.io.files.SystemFileSystem
 
 internal data class HeaderBasedEntry(
     private val zip: ZipImpl,
@@ -15,12 +15,12 @@ internal data class HeaderBasedEntry(
 ) : ZipEntryImpl() {
     override val info by lazy { Info(fileHeader) }
 
-    override fun readToSource() = SystemFileSystem.source(zip.path)
+    override fun readToSource() = fileSourceWithOffset(
+        path = zip.path,
+        startOffset = fileHeader.localFileHeaderOffset.toLong()
+    )
         .buffered()
-        .apply {
-            skip(fileHeader.localFileHeaderOffset.toLong())
-            LocalFileHeader.read(this)
-        }
+        .apply { LocalFileHeader.read(this) }
         .limited(fileHeader.compressedSize.toLong())
         .run {
             when (fileHeader.compressionMethod) {
