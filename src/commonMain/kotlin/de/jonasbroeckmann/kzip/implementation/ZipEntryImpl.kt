@@ -37,16 +37,16 @@ internal sealed class ZipEntryImpl : Zip.Entry {
     ) {
         val fileName by lazy {
             if (isDirectory) {
-                pathToFolderEntryName(path)
+                EntryNameUtils.pathToFolderName(path)
             } else {
-                pathToEntryName(path)
+                EntryNameUtils.pathToFileName(path)
             }.encodeToByteString()
         }
 
         val compressionMethod get() = if (isCompressed) CompressionMethod.DEFLATED else CompressionMethod.NONE
 
         constructor(fileHeader: CentralDirectory.FileHeader) : this(
-            path = entryNameToPath(fileHeader.decodedFileName),
+            path = EntryNameUtils.entryNameToPath(fileHeader.decodedFileName),
             isDirectory = fileHeader.decodedFileName.endsWith('/') || fileHeader.decodedFileName.endsWith('\\'),
             isCompressed = fileHeader.compressionMethod != CompressionMethod.NONE,
             versionMadeBy = fileHeader.versionMadeBy,
@@ -97,28 +97,4 @@ internal sealed class ZipEntryImpl : Zip.Entry {
             comment = comment,
         )
     }
-}
-
-private const val ZipEntryNameSeparator = '/'
-
-private fun pathToEntryName(path: Path): String {
-    if (path.isAbsolute) throw IllegalArgumentException("Path for zip entry must be relative: $path")
-    path.parent?.let { parent ->
-        return "${pathToEntryName(parent)}$ZipEntryNameSeparator${path.name}"
-    }
-    return path.name
-}
-
-private fun pathToFolderEntryName(path: Path): String {
-    return "${pathToEntryName(path)}$ZipEntryNameSeparator"
-}
-
-private fun entryNameToPath(name: String): Path {
-    val elements = name.split(ZipEntryNameSeparator)
-    return Path(
-        elements.first(),
-        *elements.drop(1).let {
-            if (it.lastOrNull()?.isEmpty() == true) it.dropLast(1) else it
-        }.toTypedArray()
-    )
 }

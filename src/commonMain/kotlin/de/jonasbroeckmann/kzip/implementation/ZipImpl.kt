@@ -15,7 +15,7 @@ internal class ZipImpl(
     val path: Path,
     override val mode: Zip.Mode,
     val level: Zip.CompressionLevel
-) : Zip {
+) : AbstractZip() {
     private val originalEntries by lazy {
         when (mode) {
             Zip.Mode.Read, Zip.Mode.Append -> {
@@ -35,8 +35,6 @@ internal class ZipImpl(
             throw ZipException("File does not exist: $path")
         }
     }
-
-    private var isClosed = false
 
     override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
         requireReadable()
@@ -94,26 +92,10 @@ internal class ZipImpl(
         )
     }
 
-    private fun requireOpen() {
-        if (isClosed) throw ZipException("Zip file is closed")
-    }
-
-    private fun requireWritable() {
-        requireOpen()
-        if (mode !in listOf(Zip.Mode.Write, Zip.Mode.Append)) throw ZipException("Zip is not opened writable")
-    }
-
-    private fun requireReadable() {
-        requireOpen()
-        if (mode !in listOf(Zip.Mode.Read, Zip.Mode.Append)) throw ZipException("Zip is not opened readable")
-    }
-
-    override fun close() {
-        if (isClosed) return
+    override fun closeImpl() {
         if (mode != Zip.Mode.Read) {
             writeToFile()
         }
-        isClosed = true
     }
 
     private fun writeToFile() {
