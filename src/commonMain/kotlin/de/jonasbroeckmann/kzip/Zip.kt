@@ -41,15 +41,17 @@ public interface Zip : AutoCloseable {
      * Deletes entries from the ZIP file.
      *
      * @param paths the paths of the entries to delete
+     * @return `true` if any entries were deleted, `false` otherwise
      */
-    public fun deleteEntries(paths: List<Path>)
+    public fun deleteEntries(paths: List<Path>): Boolean
 
     /**
      * Deletes entries from the ZIP file.
      *
      * @param indices the indices of the entries to delete
+     * @return `true` if any entries were deleted, `false` otherwise
      */
-    public fun deleteEntriesByIndex(indices: List<Int>)
+    public fun deleteEntriesByIndex(indices: List<Int>): Boolean
 
     /**
      * Adds an entry to the ZIP file from a [Source].

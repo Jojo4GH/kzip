@@ -13,6 +13,7 @@ import net.lingala.zip4j.model.enums.CompressionLevel as Zip4jCompressionLevel
 import net.lingala.zip4j.model.enums.CompressionMethod
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.util.zip.ZipException as JavaZipException
 
 actual fun Zip.Companion.openNative(
     path: Path,
@@ -55,17 +56,34 @@ private class JavaZip(
         return Entry(fileHeader).block()
     }
 
-    override fun deleteEntries(paths: List<Path>) {
+    override fun deleteEntries(paths: List<Path>): Boolean {
         requireWritable()
-        paths.forEach { zipFile.removeFile(EntryNameUtils.pathToFileName(it)) }
+        return paths
+            .map { path ->
+                try {
+                    zipFile.removeFile(EntryNameUtils.pathToFileName(path))
+                    true
+                } catch (_: JavaZipException) {
+                    false
+                }
+            }
+            .any()
     }
 
-    override fun deleteEntriesByIndex(indices: List<Int>) {
+    override fun deleteEntriesByIndex(indices: List<Int>): Boolean {
         requireWritable()
         val headers = zipFile.fileHeaders
-        indices.sortedDescending().forEach { index ->
-            zipFile.removeFile(headers[index])
-        }
+        return indices
+            .sortedDescending()
+            .map { index ->
+                try {
+                    zipFile.removeFile(headers[index])
+                    true
+                } catch (_: JavaZipException) {
+                    false
+                }
+            }
+            .any()
     }
 
     override fun entryFromSource(entry: Path, data: Source) {

@@ -25,6 +25,22 @@ public inline fun Zip.forEachEntry(crossinline block: (Zip.Entry) -> Unit): Unit
 }
 
 /**
+ * Deletes entries from the ZIP file.
+ *
+ * @param paths the paths of the entries to delete
+ * @return `true` if any entries were deleted, `false` otherwise
+ */
+public fun Zip.deleteEntries(vararg paths: Path): Boolean = deleteEntries(paths.toList())
+
+/**
+ * Deletes entries from the ZIP file.
+ *
+ * @param indices the indices of the entries to delete
+ * @return `true` if any entries were deleted, `false` otherwise
+ */
+public fun Zip.deleteEntriesByIndex(vararg indices: Int): Boolean = deleteEntriesByIndex(indices.toList())
+
+/**
  * Extracts all entries in the ZIP file into the given directory.
  *
  * @param directory the directory to extract the entries into

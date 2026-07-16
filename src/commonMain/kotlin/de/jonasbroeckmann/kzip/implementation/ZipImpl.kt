@@ -51,16 +51,17 @@ internal class ZipImpl(
         return entries[index].block()
     }
 
-    override fun deleteEntries(paths: List<Path>) {
+    override fun deleteEntries(paths: List<Path>): Boolean {
         requireWritable()
         fun Path.shouldRemove() = paths.any { this isEqualOrSubpathOf it }
-        originalEntries.removeAll { it.path.shouldRemove() }
-        newEntries.removeAll { it.path.shouldRemove() }
+        val removedOriginal = originalEntries.removeAll { it.path.shouldRemove() }
+        val removedNew = newEntries.removeAll { it.path.shouldRemove() }
+        return removedOriginal || removedNew
     }
 
-    override fun deleteEntriesByIndex(indices: List<Int>) {
+    override fun deleteEntriesByIndex(indices: List<Int>): Boolean {
         requireWritable()
-        deleteEntries(indices.map { entries[it].path })
+        return deleteEntries(indices.map { entries[it].path })
     }
 
     private fun entryFromRawSource(entry: Path, data: RawSource) {

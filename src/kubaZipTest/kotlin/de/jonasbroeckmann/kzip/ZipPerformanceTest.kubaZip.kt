@@ -56,12 +56,14 @@ private class KubaZip(
         requireWritable()
         val names = paths.map { EntryNameUtils.pathToFileName(it) }
         val result = zip_entries_delete(handle, names.toCStringArray(this), names.size.toULong())
-        if (result <= 0) throwZipError("Failed to delete entries", result)
+        if (result < 0) throwZipError("Failed to delete entries", result)
+        result > 0
     }
     override fun deleteEntriesByIndex(indices: List<Int>) = memScoped {
         requireWritable()
         val result = zip_entries_deletebyindex(handle, indices.map { it.toULong() }.toULongArray().toCValues().ptr, indices.size.toULong())
-        if (result <= 0) throwZipError("Failed to delete entries", result)
+        if (result < 0) throwZipError("Failed to delete entries", result)
+        result > 0
     }
 
     override fun entryFromSource(entry: Path, data: Source) {
