@@ -15,7 +15,7 @@ private class FileSource(
     startOffset: Long
 ) : RawSource {
     private val lazyHandle = lazy {
-        FileSystem.SYSTEM.openReadOnly(path.toString().toPath())
+        FileSystem.SYSTEM.openReadOnly(path.toOkioPath())
     }
     private val lazySource = lazy {
         lazyHandle.value.source(fileOffset = startOffset).asKotlinxIoRawSource()
