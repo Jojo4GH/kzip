@@ -42,7 +42,7 @@ private class KubaZip(
         val name = EntryNameUtils.pathToFileName(entry)
         if (zip_entry_open(handle, name) != 0) return null
         return try {
-            block()
+            Entry().block()
         } finally {
             zip_entry_close(handle).zeroOrZipError()
         }
