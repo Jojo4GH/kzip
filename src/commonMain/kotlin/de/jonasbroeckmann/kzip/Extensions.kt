@@ -25,6 +25,26 @@ public inline fun Zip.forEachEntry(crossinline block: (Zip.Entry) -> Unit): Unit
 }
 
 /**
+ * Maps all entries in the ZIP file to a list of results using the given block.
+ *
+ * @param block the block to execute on each index and entry
+ * @return a sequence of results
+ */
+public inline fun <R> Zip.mapEntriesIndexed(crossinline block: (Int, Zip.Entry) -> R): Sequence<R> = (0 until numberOfEntries)
+    .asSequence()
+    .map { i -> entry(i) { block(i, this) } }
+
+/**
+ * Maps all entries in the ZIP file to a list of results using the given block.
+ *
+ * @param block the block to execute on each entry
+ * @return a sequence of results
+ */
+public inline fun <R> Zip.mapEntries(crossinline block: (Zip.Entry) -> R): Sequence<R> = mapEntriesIndexed { _, entry ->
+    block(entry)
+}
+
+/**
  * Deletes entries from the ZIP file.
  *
  * @param paths the paths of the entries to delete
