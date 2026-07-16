@@ -1,18 +1,20 @@
 # Kzip
 
 [![Maven Central][kzip-maven-badge]][kzip-maven]
+![GitHub Workflow Status][github-master-status]
 [![GitHub][kzip-license-badge]](LICENSE)
-
 [![Kotlin Multiplatform][kotlin-multiplatform-badge]][kotlin-multiplatform]
-[![JVM Platform][jvm-platform-badge]][kotlin-jvm]
-[![Linux X64 Platform][linux-x64-platform-badge]][kotlin-native]
-[![Linux ARM64 Platform][linux-arm64-platform-badge]][kotlin-native]
-[![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native]
-[![Android X64 Platform][android-x64-platform-badge]][kotlin-native]
-[![Android ARM64 Platform][android-arm64-platform-badge]][kotlin-native]
+
+[//]: # ([![JVM Platform][jvm-platform-badge]][kotlin-jvm])
+[//]: # ([![Linux X64 Platform][linux-x64-platform-badge]][kotlin-native])
+[//]: # ([![Linux ARM64 Platform][linux-arm64-platform-badge]][kotlin-native])
+[//]: # ([![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native])
+[//]: # ([![Android X64 Platform][android-x64-platform-badge]][kotlin-native])
+[//]: # ([![Android ARM64 Platform][android-arm64-platform-badge]][kotlin-native])
 
 [kzip-maven-badge]: https://img.shields.io/maven-central/v/de.jonasbroeckmann.kzip/kzip?label=Latest
 [kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip?cacheSeconds=3600
+[github-master-status]: https://img.shields.io/github/checks-status/Jojo4GH/kzip/master
 [kotlin-multiplatform-badge]: https://img.shields.io/badge/Kotlin_Multiplatform-grey?logo=kotlin
 [jvm-platform-badge]: https://img.shields.io/badge/Platform-JVM-4dbb5f
 [linux-x64-platform-badge]: https://img.shields.io/badge/Native-Linux_X64-e082f3
@@ -34,25 +36,31 @@ A lightweight Kotlin Multiplatform library for reading, writing and modifying ZI
 - 🗜️ Easy **extraction** and **compression** of files and directories
 - 📝 **Modifying** existing ZIP files
 
-The kotlin file I/O interface uses [kotlinx-io](https://github.com/Kotlin/kotlinx-io) making it compatible with other Kotlin Multiplatform libraries.
-The JVM implementation uses the standard `java.util.zip` while the current native implementation uses the lightweight [kuba--/zip](https://github.com/kuba--/zip).
+The Kotlin file I/O interface uses [kotlinx-io](https://github.com/Kotlin/kotlinx-io) making it compatible with other Kotlin Multiplatform libraries.
+The multiplatform implementation is tested and benchmarked against [zip4j](https://github.com/srikanth-lingala/zip4j) on JVM and [kuba--/zip](https://github.com/kuba--/zip) on native targets with up to 2x performance improvement.
 
-Currently kzip supports the following targets:
 
-- `jvm`
-- `linuxX64`
-- `linuxArm64`
-- `mingwX64`
-- `androidNativeX64`
-- `androidNativeArm64`
-- `macosX64`
-- `macosArm64`
+Kzip currently supports the following targets:
 
-But the following targets are planned (mostly only requiring testing):
+- JVM
+- Native:
+  - Linux: `linuxX64`, `linuxArm64`
+  - Windows: `mingwX64`
+  - Android native: `androidNativeX64`[^nonOkio], `androidNativeArm64`[^nonOkio]
+  - Apple:
+    - macOS: `macosX64`, `macosArm64`
+    - iOS: `iosArm64`, `iosSimulatorArm64`, `iosX64`[^deprecated]
+    - tvOS: `tvosArm64`, `tvosSimulatorArm64`, `tvosX64`[^deprecated]
+    - watchOS: `watchosArm64`, `watchosSimulatorArm64`, `watchosArm32`, `watchosX64`[^deprecated]
+- Web:
+  - `js`[^nonOkio] (Node.js only)
+  - `wasmJs`[^nonOkio] (Node.js only)
 
-- Other Apple targets
+[^nonOkio]: Extraction performance may be impacted currently depending on the file system
 
-More features are planned including support for suspending functions, more access to metadata, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
+[^deprecated]: [Deprecated since Kotlin 2.3.20](https://kotlinlang.org/docs/native-target-support.html#deprecated-targets)
+
+More features are planned, including support for suspending functions, more access to metadata, a ZIP file system, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
 
 ## 🛠️ Installation
 
@@ -89,7 +97,7 @@ implementation "de.jonasbroeckmann.kzip:kzip:$kzipVersion"
 ```
 </details>
 
-## 🚀 Usage
+## 🚀 Usage Examples
 
 ### Reading a ZIP file
 
@@ -97,9 +105,9 @@ implementation "de.jonasbroeckmann.kzip:kzip:$kzipVersion"
 val zip = Zip.open(Path("example.zip"))
 
 // Access a specific entry
-zip.entry(Path("content.txt")) {
-    println("Entry content.txt has size $uncompressedSize")
-    println("Entry content.txt has content:")
+zip.entry(Path("my_compressed.txt")) {
+    println("Entry my_compressed.txt has size $compressedSize/$uncompressedSize")
+    println("Entry my_compressed.txt has content:")
     println(readToSource().readString())
 }
 
@@ -116,6 +124,21 @@ zip.forEachEntry { entry ->
 }
 
 zip.close()
+```
+
+### Modifying a ZIP file
+
+```kotlin
+Zip.open(Path("example.zip"), mode = Zip.Mode.Append).use { zip ->
+    // Add a folder
+    zip.folderEntry(Path("subfolder"))
+    // Add a file from a path
+    zip.entryFromPath(Path("subfolder", "compressed.txt"), Path("example.txt"))
+    // Add a file from a source
+    zip.entryFromSource(Path("hello_world.txt"), Buffer().apply { writeString("Hello, World!") })
+    // Delete an entry
+    zip.deleteEntries(Path("old_file.txt"))
+}
 ```
 
 ### Extracting a ZIP file
@@ -137,21 +160,6 @@ Zip.open(
 ).use { zip ->
     zip.compressFrom(Path("example"))
 }
-```
-
-### Modifying a ZIP file
-
-```kotlin
-val textSource = Buffer().apply { writeString("Hello, World!") }
-Zip.open(Path("example.zip"), mode = Zip.Mode.Append).use { zip ->
-    // Add a folder
-    zip.folderEntry(Path("subfolder"))
-    // Add a file from a path
-    zip.entryFromPath(Path("compressed.txt"), Path("example.txt"))
-    // Add a file from a source
-    zip.entryFromSource(Path("hello_world.txt"), textSource)
-}
-textSource.close()
 ```
 
 ## 🚧 Contributing
