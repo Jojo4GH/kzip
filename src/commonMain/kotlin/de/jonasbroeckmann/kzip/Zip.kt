@@ -8,7 +8,7 @@ import kotlinx.io.files.SystemFileSystem
 /**
  * A ZIP file.
  *
- * Use the [de.jonasbroeckmann.kzip.implementation.open] function to open a ZIP file.
+ * Use the [de.jonasbroeckmann.kzip.open] function to open a ZIP file.
  */
 public interface Zip : AutoCloseable {
     /**
@@ -40,16 +40,12 @@ public interface Zip : AutoCloseable {
     /**
      * Deletes entries from the ZIP file.
      *
-     * **Note:** This operation is not supported on JVM.
-     *
      * @param paths the paths of the entries to delete
      */
     public fun deleteEntries(paths: List<Path>)
 
     /**
      * Deletes entries from the ZIP file.
-     *
-     * **Note:** This operation is not supported on JVM.
      *
      * @param indices the indices of the entries to delete
      */
