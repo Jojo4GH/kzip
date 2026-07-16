@@ -38,6 +38,16 @@ internal class ZipImpl(
         }
     }
 
+    override fun <R> entryOrNull(entry: Path, block: Zip.Entry.() -> R): R? {
+        requireReadable()
+        return entries.firstOrNull { it.path == entry }?.block()
+    }
+
+    override fun <R> entryOrNull(index: Int, block: Zip.Entry.() -> R): R? {
+        requireReadable()
+        return entries.getOrNull(index)?.block()
+    }
+
     override fun <R> entry(entry: Path, block: Zip.Entry.() -> R): R {
         requireReadable()
         val zipEntry = entries.firstOrNull { it.path == entry }

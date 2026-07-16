@@ -26,6 +26,26 @@ public interface Zip : AutoCloseable {
      *
      * @param entry the path of the entry
      * @param block the block to execute on the entry
+     * @return the result of [block] or `null` if the entry does not exist
+     */
+    public fun <R> entryOrNull(entry: Path, block: Entry.() -> R): R?
+
+    /**
+     * Obtains an entry in the ZIP file by its index.
+     *
+     * @param index the index of the entry
+     * @param block the block to execute on the entry
+     * @return the result of [block] or `null` if the entry does not exist
+     */
+    public fun <R> entryOrNull(index: Int, block: Entry.() -> R): R?
+
+    /**
+     * Obtains an entry in the ZIP file by its path.
+     *
+     * @param entry the path of the entry
+     * @param block the block to execute on the entry
+     * @return the result of [block]
+     * @throws ZipException if the entry does not exist
      */
     public fun <R> entry(entry: Path, block: Entry.() -> R): R
 
@@ -34,6 +54,8 @@ public interface Zip : AutoCloseable {
      *
      * @param index the index of the entry
      * @param block the block to execute on the entry
+     * @return the result of [block]
+     * @throws ZipException if the entry does not exist
      */
     public fun <R> entry(index: Int, block: Entry.() -> R): R
 

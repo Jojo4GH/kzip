@@ -43,6 +43,17 @@ private class JavaZip(
 
     override val numberOfEntries: Int get() = zipFile.fileHeaders.size
 
+    override fun <R> entryOrNull(entry: Path, block: Zip.Entry.() -> R): R? {
+        requireReadable()
+        val name = EntryNameUtils.pathToFileName(entry)
+        return zipFile.getFileHeader(name)?.let { Entry(it).block() }
+    }
+
+    override fun <R> entryOrNull(index: Int, block: Zip.Entry.() -> R): R? {
+        requireReadable()
+        return zipFile.fileHeaders.getOrNull(index)?.let { Entry(it).block() }
+    }
+
     override fun <R> entry(entry: Path, block: Zip.Entry.() -> R): R {
         requireReadable()
         val name = EntryNameUtils.pathToFileName(entry)

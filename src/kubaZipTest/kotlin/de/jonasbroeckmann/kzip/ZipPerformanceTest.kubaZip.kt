@@ -38,6 +38,27 @@ private class KubaZip(
         }
     }
 
+    override fun <R> entryOrNull(entry: Path, block: Zip.Entry.() -> R): R? {
+        val name = EntryNameUtils.pathToFileName(entry)
+        if (zip_entry_open(handle, name) != 0) return null
+        return try {
+            block()
+        } finally {
+            zip_entry_close(handle).zeroOrZipError()
+        }
+        return withZipEntry(EntryNameUtils.pathToFileName(entry)) {
+            Entry().block()
+        }
+    }
+    override fun <R> entryOrNull(index: Int, block: Zip.Entry.() -> R): R? {
+        if (zip_entry_openbyindex(handle, index.toULong()) != 0) return null
+        return try {
+            Entry().block()
+        } finally {
+            zip_entry_close(handle).zeroOrZipError()
+        }
+    }
+
     override fun <R> entry(entry: Path, block: Zip.Entry.() -> R): R {
         return withZipEntry(EntryNameUtils.pathToFileName(entry)) {
             Entry().block()
