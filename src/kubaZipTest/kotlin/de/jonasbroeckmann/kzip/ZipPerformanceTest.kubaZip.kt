@@ -29,23 +29,23 @@ private class KubaZip(
 ) : AbstractZip() {
     override val numberOfEntries: Int by lazy { zip_entries_total(handle).orZipError() }
 
-    private fun withZipEntry(name: String, block: () -> Unit) {
+    private fun <R> withZipEntry(name: String, block: () -> R): R {
         zip_entry_open(handle, name).zeroOrZipError()
-        try {
+        return try {
             block()
         } finally {
             zip_entry_close(handle).zeroOrZipError()
         }
     }
 
-    override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
-        withZipEntry(EntryNameUtils.pathToFileName(entry)) {
+    override fun <R> entry(entry: Path, block: Zip.Entry.() -> R): R {
+        return withZipEntry(EntryNameUtils.pathToFileName(entry)) {
             Entry().block()
         }
     }
-    override fun entry(index: Int, block: Zip.Entry.() -> Unit) {
+    override fun <R> entry(index: Int, block: Zip.Entry.() -> R): R {
         zip_entry_openbyindex(handle, index.toULong()).zeroOrZipError()
-        try {
+        return try {
             Entry().block()
         } finally {
             zip_entry_close(handle).zeroOrZipError()

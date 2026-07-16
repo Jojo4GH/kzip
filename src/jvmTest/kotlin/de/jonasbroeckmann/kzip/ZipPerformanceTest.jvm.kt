@@ -42,17 +42,17 @@ private class JavaZip(
 
     override val numberOfEntries: Int get() = zipFile.fileHeaders.size
 
-    override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
+    override fun <R> entry(entry: Path, block: Zip.Entry.() -> R): R {
         requireReadable()
         val name = EntryNameUtils.pathToFileName(entry)
         val fileHeader = zipFile.getFileHeader(name) ?: throw ZipException("Entry not found: $name")
-        Entry(fileHeader).block()
+        return Entry(fileHeader).block()
     }
 
-    override fun entry(index: Int, block: Zip.Entry.() -> Unit) {
+    override fun <R> entry(index: Int, block: Zip.Entry.() -> R): R {
         requireReadable()
         val fileHeader = zipFile.fileHeaders[index]
-        Entry(fileHeader).block()
+        return Entry(fileHeader).block()
     }
 
     override fun deleteEntries(paths: List<Path>) {

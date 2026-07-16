@@ -9,6 +9,8 @@ import kotlinx.io.bytestring.ByteString
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlin.Boolean
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.use
 
 internal class ZipImpl(
@@ -36,17 +38,17 @@ internal class ZipImpl(
         }
     }
 
-    override fun entry(entry: Path, block: Zip.Entry.() -> Unit) {
+    override fun <R> entry(entry: Path, block: Zip.Entry.() -> R): R {
         requireReadable()
         val zipEntry = entries.firstOrNull { it.path == entry }
             ?: throw ZipException("Entry not found: $entry")
-        zipEntry.block()
+        return zipEntry.block()
     }
 
-    override fun entry(index: Int, block: Zip.Entry.() -> Unit) {
+    override fun <R> entry(index: Int, block: Zip.Entry.() -> R): R {
         requireReadable()
         if (index !in entries.indices) throw ZipException("Invalid index: $index")
-        entries[index].block()
+        return entries[index].block()
     }
 
     override fun deleteEntries(paths: List<Path>) {

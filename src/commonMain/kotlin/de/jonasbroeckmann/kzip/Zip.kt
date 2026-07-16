@@ -27,7 +27,7 @@ public interface Zip : AutoCloseable {
      * @param entry the path of the entry
      * @param block the block to execute on the entry
      */
-    public fun entry(entry: Path, block: Entry.() -> Unit)
+    public fun <R> entry(entry: Path, block: Entry.() -> R): R
 
     /**
      * Obtains an entry in the ZIP file by its index.
@@ -35,7 +35,7 @@ public interface Zip : AutoCloseable {
      * @param index the index of the entry
      * @param block the block to execute on the entry
      */
-    public fun entry(index: Int, block: Entry.() -> Unit)
+    public fun <R> entry(index: Int, block: Entry.() -> R): R
 
     /**
      * Deletes entries from the ZIP file.
