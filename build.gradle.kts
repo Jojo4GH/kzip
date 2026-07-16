@@ -111,12 +111,12 @@ kotlin {
     sourceSets {
         val kotlinxIOVersion = "0.9.1"
         commonMain.dependencies {
-            implementation("org.jetbrains.kotlinx:kotlinx-io-core:$kotlinxIOVersion")
+            api("org.jetbrains.kotlinx:kotlinx-io-core:$kotlinxIOVersion")
             implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
         }
         getByName("okioMain").dependencies {
             implementation("com.squareup.okio:okio:3.16.2")
-            implementation ("org.jetbrains.kotlinx:kotlinx-io-okio:${kotlinxIOVersion}")
+            implementation("org.jetbrains.kotlinx:kotlinx-io-okio:${kotlinxIOVersion}")
         }
 
         commonTest.dependencies {
