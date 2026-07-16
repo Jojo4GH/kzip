@@ -17,7 +17,7 @@ jobs:
       - name: Set up Kotlin
         uses: fwilhe2/setup-kotlin@v1.4
         with:
-          version: 2.3.0
+          version: 2.4.0
           install-native: true
 
       - name: Set up JDK 22
