@@ -5,7 +5,6 @@ import kotlinx.io.RawSource
 import kotlinx.io.files.Path
 import kotlinx.io.okio.asKotlinxIoRawSource
 import okio.FileSystem
-import okio.Path.Companion.toPath
 import okio.SYSTEM
 
 internal actual fun fileSourceWithOffset(path: Path, startOffset: Long): RawSource = FileSource(path, startOffset)

@@ -6,7 +6,8 @@ import de.jonasbroeckmann.kzip.implementation.model.CompressionMethod
 import de.jonasbroeckmann.kzip.implementation.model.LocalFileHeader
 import de.jonasbroeckmann.kzip.implementation.util.fileSourceWithOffset
 import de.jonasbroeckmann.kzip.implementation.util.limited
-import de.jonasbroeckmann.kzip.implementation.util.wrappedInflating
+import de.jonasbroeckmann.kzip.implementation.util.wrapped
+import dev.karmakrafts.kompress.inflating
 import kotlinx.io.buffered
 
 internal data class HeaderBasedEntry(
@@ -25,7 +26,7 @@ internal data class HeaderBasedEntry(
         .run {
             when (fileHeader.compressionMethod) {
                 CompressionMethod.NONE -> this
-                CompressionMethod.DEFLATED -> wrappedInflating(raw = true)
+                CompressionMethod.DEFLATED -> wrapped { inflating(raw = true) }
                 else -> throw ZipException("Unsupported compression method: ${fileHeader.compressionMethod.toHexString()}")
             }
         }

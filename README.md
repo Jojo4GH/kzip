@@ -49,16 +49,14 @@ Kzip currently supports the following targets:
   - Android native: `androidNativeX64`[^nonOkio], `androidNativeArm64`[^nonOkio]
   - Apple:
     - macOS: `macosX64`, `macosArm64`
-    - iOS: `iosArm64`, `iosSimulatorArm64`, `iosX64`[^deprecated]
-    - tvOS: `tvosArm64`, `tvosSimulatorArm64`, `tvosX64`[^deprecated]
-    - watchOS: `watchosArm64`, `watchosSimulatorArm64`, `watchosArm32`, `watchosX64`[^deprecated]
+    - iOS: `iosArm64`, `iosSimulatorArm64`
+    - tvOS: `tvosArm64`, `tvosSimulatorArm64`
+    - watchOS: `watchosArm64`, `watchosSimulatorArm64`, `watchosArm32`
 - Web:
   - `js`[^nonOkio] (Node.js only)
   - `wasmJs`[^nonOkio] (Node.js only)
 
 [^nonOkio]: Extraction performance may be impacted currently depending on the file system
-
-[^deprecated]: [Deprecated since Kotlin 2.3.20](https://kotlinlang.org/docs/native-target-support.html#deprecated-targets)
 
 More features are planned, including support for suspending functions, more access to metadata, a ZIP file system, more utilities and integrations into other KMP libraries (see also [Contributing](#-contributing)).
 

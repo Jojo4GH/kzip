@@ -44,18 +44,15 @@ kotlin {
     //     nodejs()
     // }
 
-    macosX64()
+    // macosX64() // no support from dev.karmakrafts.kompress
     macosArm64()
 
-    iosX64()
     iosArm64()
     iosSimulatorArm64()
 
-    tvosX64()
     tvosArm64()
     tvosSimulatorArm64()
 
-    watchosX64()
     watchosArm32()
     watchosArm64()
     watchosSimulatorArm64()
@@ -70,7 +67,6 @@ kotlin {
                 group("mingw")
                 group("linux")
                 group("apple")
-                withWasmWasi()
             }
             // Source sets without Okio implementations
             group("nonOkio") {
@@ -78,6 +74,7 @@ kotlin {
                     withJs()
                     withWasmJs()
                 }
+                withWasmWasi()
                 group("androidNative") { withAndroidNative() }
             }
             // Source sets for benchmarks
@@ -112,7 +109,8 @@ kotlin {
         val kotlinxIOVersion = "0.9.1"
         commonMain.dependencies {
             api("org.jetbrains.kotlinx:kotlinx-io-core:$kotlinxIOVersion")
-            implementation("dev.karmakrafts.kompress:kompress-core:1.3.0")
+            // waiting for https://github.com/karmakrafts/Kompress/issues/6
+            implementation("dev.karmakrafts.kompress:kompress-core:1.4.3")
         }
         getByName("okioMain").dependencies {
             implementation("com.squareup.okio:okio:3.16.2")

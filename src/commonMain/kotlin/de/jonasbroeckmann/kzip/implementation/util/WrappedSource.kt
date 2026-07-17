@@ -1,15 +1,11 @@
 package de.jonasbroeckmann.kzip.implementation.util
 
-import dev.karmakrafts.kompress.Deflater
-import dev.karmakrafts.kompress.Inflater
-import dev.karmakrafts.kompress.deflating
-import dev.karmakrafts.kompress.inflating
 import kotlinx.io.Buffer
 import kotlinx.io.RawSource
 
-private class WrappedSource(
-    private val upstream: RawSource,
-    wrapped: RawSource.() -> RawSource
+private class WrappedSource<Upstream : RawSource>(
+    private val upstream: Upstream,
+    wrapped: Upstream.() -> RawSource
 ) : RawSource {
     private val wrapped = upstream.wrapped()
 
@@ -21,13 +17,4 @@ private class WrappedSource(
     }
 }
 
-internal fun RawSource.wrappedInflating(
-    raw: Boolean = true,
-    bufferSize: Int = Inflater.DEFAULT_BUFFER_SIZE
-): RawSource = WrappedSource(this) { inflating(raw = raw, bufferSize = bufferSize) }
-
-internal fun RawSource.wrappedDeflating(
-    raw: Boolean = true,
-    level: Int = Deflater.DEFAULT_LEVEL,
-    bufferSize: Int = Deflater.DEFAULT_BUFFER_SIZE
-): RawSource = WrappedSource(this) { deflating(raw = raw, level = level, bufferSize = bufferSize) }
+internal fun <T : RawSource> T.wrapped(wrapped: T.() -> RawSource): RawSource = WrappedSource(this, wrapped)
