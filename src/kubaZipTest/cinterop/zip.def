@@ -1,0 +1,8 @@
+package = libzip
+headers = zip/miniz.h zip/zip.h
+headerFilter = zip/*
+
+staticLibraries.linux = libzip.linuxX64.a
+staticLibraries.mingw = libzip.mingwX64.a
+staticLibraries.osx = libzip.osx.a
+libraryPaths = src/kubaZipTest/cinterop

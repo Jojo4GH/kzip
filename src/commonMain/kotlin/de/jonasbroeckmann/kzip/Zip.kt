@@ -1,12 +1,14 @@
 package de.jonasbroeckmann.kzip
 
+import de.jonasbroeckmann.kzip.implementation.ZipImpl
 import kotlinx.io.*
 import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 
 /**
  * A ZIP file.
  *
- * Use the [open] function to open a ZIP file.
+ * Use the [de.jonasbroeckmann.kzip.open] function to open a ZIP file.
  */
 public interface Zip : AutoCloseable {
     /**
@@ -24,34 +26,54 @@ public interface Zip : AutoCloseable {
      *
      * @param entry the path of the entry
      * @param block the block to execute on the entry
+     * @return the result of [block] or `null` if the entry does not exist
      */
-    public fun entry(entry: Path, block: Entry.() -> Unit)
+    public fun <R> entryOrNull(entry: Path, block: Entry.() -> R): R?
 
     /**
      * Obtains an entry in the ZIP file by its index.
      *
      * @param index the index of the entry
      * @param block the block to execute on the entry
+     * @return the result of [block] or `null` if the entry does not exist
      */
-    public fun entry(index: Int, block: Entry.() -> Unit)
+    public fun <R> entryOrNull(index: Int, block: Entry.() -> R): R?
+
+    /**
+     * Obtains an entry in the ZIP file by its path.
+     *
+     * @param entry the path of the entry
+     * @param block the block to execute on the entry
+     * @return the result of [block]
+     * @throws ZipException if the entry does not exist
+     */
+    public fun <R> entry(entry: Path, block: Entry.() -> R): R
+
+    /**
+     * Obtains an entry in the ZIP file by its index.
+     *
+     * @param index the index of the entry
+     * @param block the block to execute on the entry
+     * @return the result of [block]
+     * @throws ZipException if the entry does not exist
+     */
+    public fun <R> entry(index: Int, block: Entry.() -> R): R
 
     /**
      * Deletes entries from the ZIP file.
-     *
-     * **Note:** This operation is not supported on JVM.
      *
      * @param paths the paths of the entries to delete
+     * @return `true` if any entries were deleted, `false` otherwise
      */
-    public fun deleteEntries(paths: List<Path>)
+    public fun deleteEntries(paths: List<Path>): Boolean
 
     /**
      * Deletes entries from the ZIP file.
      *
-     * **Note:** This operation is not supported on JVM.
-     *
      * @param indices the indices of the entries to delete
+     * @return `true` if any entries were deleted, `false` otherwise
      */
-    public fun deleteEntriesByIndex(indices: List<Int>)
+    public fun deleteEntriesByIndex(indices: List<Int>): Boolean
 
     /**
      * Adds an entry to the ZIP file from a [Source].
@@ -117,14 +139,20 @@ public interface Zip : AutoCloseable {
          *
          * @return the byte array to read the entry from
          */
-        public fun readToBytes(): ByteArray
+        public fun readToBytes(): ByteArray = readToSource().use { it.readByteArray() }
 
         /**
          * Reads the entry to a file.
          *
          * @param path the path to read the entry to
          */
-        public fun readToPath(path: Path)
+        public fun readToPath(path: Path) {
+            readToSource().use { source ->
+                SystemFileSystem.sink(path).buffered().use { sink ->
+                    source.transferTo(sink)
+                }
+            }
+        }
     }
 
     /**
@@ -185,8 +213,12 @@ public interface Zip : AutoCloseable {
  * @param mode the mode to open the ZIP file in. Defaults to [Zip.Mode.Read]
  * @param level the compression level to use when writing to the ZIP file. Defaults to [Zip.CompressionLevel.Default]
  */
-public expect fun Zip.Companion.open(
+public fun Zip.Companion.open(
     path: Path,
     mode: Zip.Mode = Zip.Mode.Read,
     level: Zip.CompressionLevel = Zip.CompressionLevel.Default
-): Zip
+): Zip = ZipImpl(
+    path = path,
+    mode = mode,
+    level = level
+)

@@ -7,4 +7,4 @@ import kotlinx.io.IOException
  *
  * @param message the message of the exception
  */
-public expect class ZipException(message: String) : IOException
+public class ZipException(message: String) : IOException(message)
