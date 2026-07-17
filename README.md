@@ -1,32 +1,36 @@
 # Kzip
 
 [![Maven Central][kzip-maven-badge]][kzip-maven]
-![GitHub Workflow Status][github-master-status]
+![GitHub Workflow Status][github-build-status]
 [![GitHub][kzip-license-badge]](LICENSE)
-[![Kotlin Multiplatform][kotlin-multiplatform-badge]][kotlin-multiplatform]
 
-[//]: # ([![JVM Platform][jvm-platform-badge]][kotlin-jvm])
-[//]: # ([![Linux X64 Platform][linux-x64-platform-badge]][kotlin-native])
-[//]: # ([![Linux ARM64 Platform][linux-arm64-platform-badge]][kotlin-native])
-[//]: # ([![MinGW X64 Platform][mingw-x64-platform-badge]][kotlin-native])
-[//]: # ([![Android X64 Platform][android-x64-platform-badge]][kotlin-native])
-[//]: # ([![Android ARM64 Platform][android-arm64-platform-badge]][kotlin-native])
+[![Kotlin Multiplatform][kotlin-multiplatform-badge]][kotlin-multiplatform]
+[![JVM Platform][jvm-platform-badge]][kotlin-jvm]
+[![Android Platform][android-platform-badge]][kotlin-android]
+[![Native Platform][native-platform-badge]][kotlin-native]
+[![Apple Platform][apple-platform-badge]][kotlin-apple]
+[![JS Platform][js-platform-badge]][kotlin-js]
+[![WASM/JS Platform][wasmjs-platform-badge]][kotlin-wasmjs]
 
 [kzip-maven-badge]: https://img.shields.io/maven-central/v/de.jonasbroeckmann.kzip/kzip?label=Latest
+[github-build-status]: https://img.shields.io/github/actions/workflow/status/Jojo4GH/kzip/build.yaml
 [kzip-license-badge]: https://img.shields.io/github/license/Jojo4GH/kzip?cacheSeconds=3600
-[github-master-status]: https://img.shields.io/github/checks-status/Jojo4GH/kzip/master
 [kotlin-multiplatform-badge]: https://img.shields.io/badge/Kotlin_Multiplatform-grey?logo=kotlin
-[jvm-platform-badge]: https://img.shields.io/badge/Platform-JVM-4dbb5f
-[linux-x64-platform-badge]: https://img.shields.io/badge/Native-Linux_X64-e082f3
-[linux-arm64-platform-badge]: https://img.shields.io/badge/Native-Linux_ARM64-e082f3
-[mingw-x64-platform-badge]: https://img.shields.io/badge/Native-MinGW_X64-e082f3
-[android-x64-platform-badge]: https://img.shields.io/badge/Native-Android_X64-e082f3
-[android-arm64-platform-badge]: https://img.shields.io/badge/Native-Android_ARM64-e082f3
+[jvm-platform-badge]: https://img.shields.io/badge/-JVM-ed8b00?logo=kotlin&labelColor=grey
+[android-platform-badge]: https://img.shields.io/badge/-Android-3ddc84?logo=kotlin&labelColor=grey
+[native-platform-badge]: https://img.shields.io/badge/-Native-e082f3?logo=kotlin&labelColor=grey
+[apple-platform-badge]: https://img.shields.io/badge/-Apple-lightgrey?logo=kotlin&labelColor=grey
+[js-platform-badge]: https://img.shields.io/badge/-JS-efd81d?logo=kotlin&labelColor=grey
+[wasmjs-platform-badge]: https://img.shields.io/badge/-WASM/JS-654ff0?logo=kotlin&labelColor=grey
 
 [kzip-maven]: https://central.sonatype.com/artifact/de.jonasbroeckmann.kzip/kzip
 [kotlin-multiplatform]: https://kotlinlang.org/docs/multiplatform.html
+[kotlin-jvm]: https://kotlinlang.org/docs/comparison-to-java.html
+[kotlin-android]: https://kotlinlang.org/docs/android-overview.html
 [kotlin-native]: https://kotlinlang.org/docs/native-overview.html
-[kotlin-jvm]: https://kotlinlang.org/docs/jvm-get-started.html
+[kotlin-apple]: https://kotlinlang.org/docs/apple-framework.html
+[kotlin-js]: https://kotlinlang.org/docs/js-overview.html
+[kotlin-wasmjs]: https://kotlinlang.org/docs/wasm-overview.html
 
 A lightweight Kotlin Multiplatform library for reading, writing and modifying ZIP files.
 
