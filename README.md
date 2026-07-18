@@ -57,8 +57,8 @@ Kzip currently supports the following targets:
     - tvOS: `tvosArm64`, `tvosSimulatorArm64`
     - watchOS: `watchosArm64`, `watchosSimulatorArm64`, `watchosArm32`
 - Web:
-  - `js`[^nonOkio] (Node.js only)
-  - `wasmJs`[^nonOkio] (Node.js only)
+  - `js`[^nonOkio]
+  - `wasmJs`[^nonOkio]
 
 [^nonOkio]: Extraction performance may be impacted currently depending on the file system
 
